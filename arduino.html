@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المنهج التفاعلي لـ Arduino و NodeMCU</title>
+    <!-- Chosen Palette: Warm Harmony / High-Contrast Dark -->
+    <!-- Application Structure Plan: بنية التطبيق هي SPA (تطبيق صفحة واحدة) تعتمد على JavaScript مع عرضين رئيسيين: "نظرة عامة" و "مستكشف المنهج". "نظرة عامة" (الافتراضية) تقدم ملخصًا عالي المستوى مع إحصائيات ومخطط دائري تفاعلي (Chart.js) يصور أقسام المنهج الرئيسية (أساسيات، عتاد، متقدم، إنترنت الأشياء). النقر على المخطط يفلتر عرض "المستكشف". عرض "المستكشف" (يمكن الوصول إليه أيضًا عبر التنقل) هو أداة التنقل الرئيسية، ويضم فلاتر وشبكة من 16 بطاقة. النقر على أي بطاقة يستبدل العرض ديناميكيًا بـ "صفحة تفاصيل" لذلك الجزء المحدد، والتي تستخدم واجهة مبوبة (HTML/JS) لتنظيم الشرح المفصل، وأفكار المشاريع، ومقتطفات الكود، والسؤال الذهبي. تم اختيار هذه البنية لتدفق مستخدم مثالي، مما يسمح بالاستكشاف عالي المستوى (المخطط) والغوص العميق (التفاصيل المبوبة) دون إرهاق المستخدم بصفحة تمرير طويلة واحدة. -->
+    <!-- Visualization & Content Choices: 
+        1. معلومات التقرير: هيكل المنهج المكون من 16 جزءًا. الهدف: إعلام (عالي المستوى) ومقارنة (تركيز الأقسام). الطريقة: مخطط دائري (Chart.js) + بطاقات إحصائيات (HTML/Tailwind). التفاعل: النقر على شريحة المخطط يفلتر المستكشف. التبرير: المخطط الدائري يوصل فورًا تكوين المنهج (مثل "أساسيات Arduino" مقابل "إنترنت الأشياء"). الإحصائيات تقدم مقاييس سريعة. هذا أكثر جاذبية من قائمة بسيطة. المكتبة: Chart.js (Canvas).
+        2. معلومات التقرير: 16 جزءًا، لكل منها 4 أنواع محتوى (شرح، مشاريع، كود، سؤال). الهدف: تنظيم (محتوى الغوص العميق) وإعلام. الطريقة: واجهة مبوبة (HTML/CSS/JS). التفاعل: النقر على التبويبات (مثل "الكود"، "المشاريع") يغير كتلة المحتوى المرئية. التبرير: العرض المبوب هو الطريقة الأكثر سهولة في الاستخدام لتقديم معلومات كثيفة ومتعددة الأوجه لموضوع واحد دون الحاجة للتمرير. يفصل بدقة بين النظرية والتطبيق والتقييم. المكتبة: Vanilla JS (DOM manipulation).
+        3. معلومات التقرير: 16 جزءًا، مواضيع مختلفة. الهدف: تنظيم (التنقل) وعلاقات (فلترة). الطريقة: شبكة بطاقات ديناميكية (HTML/Tailwind) + فلاتر JS (بحث نصي، أزرار فئات). التفاعل: يكتب المستخدم في البحث أو ينقر على الأزرار؛ يخفي/يظهر JS البطاقات. ينقر المستخدم على البطاقة لتحميل عرض التفاصيل. التبرير: شبكة البطاقات القابلة للفلترة هي تجربة مستخدم قياسية وبديهية لاستكشاف "كتالوج" من العناصر، وهو ما تمثله هذه الأجزاء الـ 16. المكتبة: Vanilla JS (DOM manipulation).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // تفعيل الوضع الداكن بناءً على كلاس "dark" في الـ html
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'tajawal': ['Tajawal', 'sans-serif'],
+                    },
+                    colors: {
+                        'brand-primary': {
+                            '50': '#fffbeb',
+                            '100': '#fef3c7',
+                            '200': '#fde68a',
+                            '300': '#fcd34d',
+                            '400': '#fbbf24',
+                            '500': '#f59e0b',
+                            '600': '#d97706',
+                            '700': '#b45309',
+                            '800': '#92400e',
+                            '900': '#78350f',
+                            '950': '#451a03',
+                        },
+                        'brand-secondary': {
+                            '50': '#ecfdf5',
+                            '100': '#d1fae5',
+                            '200': '#a7f3d0',
+                            '300': '#7ee7b7',
+                            '400': '#34d399',
+                            '500': '#10b981',
+                            '600': '#059669',
+                            '700': '#047857',
+                            '800': '#065f46',
+                            '900': '#064e3b',
+                            '950': '#022c22',
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* الأساسي: الثيم الفاتح/الغامق للـ body وللتأكد من التباين في الوضع الداكن */
+        body {
+            transition: background-color 0.3s, color 0.3s;
+            color: #1f2937; /* gray-800 */
+        }
+        .dark body {
+            color: #f3f4f6; /* gray-100 */
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 50vh;
+        }
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 300px;
+                max-height: 40vh;
+            }
+        }
+        
+        .tab-content.hidden {
+            display: none;
+        }
+
+        .tab-button.active {
+            border-color: #b45309;
+            background-color: #fffbeb;
+            color: #b45309;
+            font-weight: 700;
+        }
+        /* تعديلات التبويبات في الوضع الداكن */
+        .dark .tab-button.active {
+            background-color: #374151; /* gray-700 */
+            border-color: #fbbf24; /* brand-primary-400 */
+            color: #fbbf24;
+        }
+
+        .tab-button {
+            border-bottom: 3px solid transparent;
+        }
+        
+        pre {
+            background-color: #1f2937; /* gray-800 - ثابت للبرمجة */
+            color: #f3f4f6; /* gray-100 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            direction: ltr; /* Code is LTR */
+            text-align: left;
+        }
+        
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .prose-custom ul {
+            list-style-type: disc;
+            padding-right: 1.5rem; /* RTL padding */
+        }
+        .prose-custom li {
+            margin-bottom: 0.5rem;
+        }
+        .prose-custom h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose-custom p {
+            margin-bottom: 1rem;
+            line-height: 1.7;
+        }
+
+        .card {
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        /* New Active Navigation Style */
+        .header-nav-btn.active {
+            background-color: #d97706; /* brand-primary-600 */
+            color: white !important;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body class="font-tajawal antialiased bg-brand-primary-50 dark:bg-gray-900" dir="rtl">
+
+    <header class="sticky top-0 z-50 bg-gray-900 text-white shadow-2xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <!-- Row 1: Logo, School Name, and Navigation -->
+            <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-4 space-x-reverse">
+                    <img src="https://ajyal.app/robot/logo.png" alt="شعار مدارس أجيال اليرموك الأهلية" class="h-20 w-20 rounded-full border-4 border-brand-primary-400" onerror="this.onerror=null; this.src='https://placehold.co/80x80/f59e0b/92400e?text=AG';">
+                    <div>
+                        <p class="text-xl font-bold text-brand-primary-400">مدارس أجيال اليرموك الأهلية</p>
+                        <h1 class="text-4xl lg:text-5xl font-extrabold text-white">المنهج التفاعلي لـ Arduino و NodeMCU</h1>
+                    </div>
+                </div>
+                <!-- Navigation and Theme Toggle -->
+                <div class="flex items-center space-x-4 space-x-reverse" dir="ltr">
+                    <button id="nav-projects" class="header-nav-btn text-white bg-transparent hover:bg-gray-800 px-3 py-2 rounded-md text-base font-medium transition-colors">أفكار المشاريع (100)</button>
+                    <button id="nav-overview" class="header-nav-btn text-white bg-transparent hover:bg-gray-800 px-3 py-2 rounded-md text-base font-medium transition-colors active">نظرة عامة</button>
+                    <button id="nav-explorer" class="header-nav-btn text-white bg-transparent hover:bg-gray-800 px-3 py-2 rounded-md text-base font-medium transition-colors">مستكشف المنهج</button>
+                    <!-- Theme Toggle Button -->
+                    <button id="theme-toggle" class="p-2 rounded-full text-brand-primary-400 hover:bg-gray-700 transition-colors">
+                        <span class="text-2xl" id="theme-icon">&#9788;</span> <!-- Sun icon for light mode, JS will change it -->
+                    </button>
+                </div>
+            </div>
+            <!-- Row 2: Preparer Info (Larger and more prominent) -->
+            <div class="mt-4 pt-3 border-t border-gray-700 w-full">
+                <p class="text-xl font-extrabold text-center text-brand-primary-400">
+                    الخطة الأكاديمية من إعداد الأستاذ / شريف بغداداي
+                </p>
+            </div>
+        </div>
+    </header>
+
+    <main id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- سيتم حقن المحتوى الديناميكي هنا -->
+    </main>
+
+    <footer class="bg-gray-900 text-gray-400 p-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-sm">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-right">
+                <!-- Column 1: School Info -->
+                <div>
+                    <h4 class="font-bold text-white mb-2">مدارس أجيال اليرموك الأهلية</h4>
+                    <p class="opacity-70">مركز للتعليم التقني المتميز في مجال الميكروكونترولر وإنترنت الأشياء.</p>
+                </div>
+                <!-- Column 2: Authorship -->
+                <div class="md:text-center">
+                    <h4 class="font-bold text-white mb-2">إعداد المنهج</h4>
+                    <p class="text-brand-primary-400 font-medium">الأستاذ / شريف بغداداي</p>
+                    <p class="opacity-70">التخصص: تطوير الأنظمة التفاعلية والبرمجة المتقدمة.</p>
+                </div>
+                <!-- Column 3: Copyright / Technical -->
+                <div class="md:text-left">
+                    <h4 class="font-bold text-white mb-2">بيانات تقنية</h4>
+                    <p class="opacity-70">تم إنشاء هذا التطبيق التفاعلي بواسطة Gemini.</p>
+                    <p class="opacity-70">جميع الحقوق محفوظة © 2025.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- 1. تخزين بيانات المنهج ---
+        // تم استخلاص هذه البيانات مباشرة من التقرير المصدر
+        const projectList = [
+            // 1. مشاريع المستوى المبتدئ (Beginner) - 25 مشروعًا
+            { level: 'مبتدئ', id: 1, title: 'تطبيق الوميض الأساسي (Blink)', concept: 'تشغيل وإطفاء LED المدمج (الطرف 13) بتأخير 1000 مللي ثانية.' },
+            { level: 'مبتدئ', id: 2, title: 'طباعة حالة الاتصال', concept: 'تهيئة الاتصال التسلسلي (UART) بسرعة 9600 باود.' },
+            { level: 'مبتدئ', id: 3, title: 'عرض عداد متغير', concept: 'طباعة قيمة متغيرة (val) على السيريال وزيادتها، مع إعادة تعيينها إلى 10 عندما تتجاوز 50.' },
+            { level: 'مبتدئ', id: 4, title: 'محاكاة وميض LED في Proteus', concept: 'إعداد مشروع ومحاكاة وميض LED داخل بيئة Proteus.' },
+            { level: 'مبتدئ', id: 5, title: 'تحديد التأخير في Visual Designer', concept: 'استخدام مصمم خريطة التتابع Visual Designer لتعيين تأخير زمني قدره 3 ثوانٍ.' },
+            { level: 'مبتدئ', id: 6, title: 'قراءة مفتاح أساسية (Digital Read)', concept: 'قراءة حالة مفتاح موصول على الطرف 2 وإضاءة LED على الطرف 13 إذا كانت HIGH.' },
+            { level: 'مبتدئ', id: 7, title: 'تغيير منطق الدائرة (عكس الحالة)', concept: 'عكس منطق التشغيل: إضاءة LED عندما يكون المفتاح موصولاً بالأرضي (القيمة LOW).' },
+            { level: 'مبتدئ', id: 8, title: 'تطبيق ساعة سيريال بسيطة', concept: 'عرض الساعة والدقائق والثواني على البوابة التسلسلية باستخدام دالة printDigits.' },
+            { level: 'مبتدئ', id: 9, title: 'تشغيل 3 ليدات بالتتابع', concept: 'استخدام دالة blinkLED لوميض ثلاثة ليدات متصلة بأطراف رقمية مختلفة (3, 5, 6).' },
+            { level: 'مبتدئ', id: 10, title: 'تشغيل LED أحادي القطبية (UniPolar)', concept: 'التحكم في موتور خطوة أحادي القطبية باستخدام الدائرة المتكاملة ULN2003A.' },
+            { level: 'مبتدئ', id: 11, title: 'التحكم في اتجاه موتور DC بسيط', concept: 'استخدام قنطرة H والطرفين IN1 و IN2 لتحديد اتجاه دوران موتور DC.' },
+            { level: 'مبتدئ', id: 12, title: 'قياس مدة تأخير طويلة', concept: 'استخدام الثوابت مثل oneHour و oneDay لتطبيق تأخيرات زمنية كبيرة.' },
+            { level: 'مبتدئ', id: 13, title: 'قياس الجهد القياسي وعرضه', concept: 'قراءة جهد متغير (0-5V) على طرف قياسي وحساب الفولت وعرضه على السيريال.' },
+            { level: 'مبتدئ', id: 14, title: 'قراءة حساس الميل الأساسي', concept: 'استخدام حساس الميل (Tilt sensor) على الطرف 2 لتشغيل أحد LEDين (11 أو 12) بناءً على اتجاه الميل.' },
+            { level: 'مبتدئ', id: 15, title: 'تشغيل ليد ملون (RGB) يدويًا', concept: 'التحكم في مكونات الأحمر والأخضر والأزرق (R, G, B) عبر أطراف PWM لتوليد لون ثابت.' },
+            { level: 'مبتدئ', id: 16, title: 'قراءة حساس الحرارة LM335', concept: 'قراءة الجهد الناتج عن حساس LM335 وتحويله إلى درجة حرارة بالكيلفن.' },
+            { level: 'مبتدئ', id: 17, title: 'تشغيل شريحة 7-Segment مفردة', concept: 'استخدام مصفوفة numeral لتمثيل الأرقام وعرضها على دائرة 7-Segment أحادية.' },
+            { level: 'مبتدئ', id: 18, title: 'التحكم الأساسي في سيرفو', concept: 'تحريك موتور سيرفو بشكل متكرر بين زاوية 0 و 180 درجة.' },
+            { level: 'مبتدئ', id: 19, title: 'تشغيل سيلونويد مؤقت', concept: 'تنشيط سيلونويد أو ريلاي لمدة ثانية واحدة ثم إيقافه لفترة زمنية طويلة (60 دقيقة).' },
+            { level: 'مبتدئ', id: 20, title: 'مولد اهتزاز بسيط', concept: 'عمل اهتزاز لمدة ثانية واحدة وإيقافه لمدة 59 ثانية باستخدام موتور اهتزاز موصول بترانزستور.' },
+            { level: 'مبتدئ', id: 21, title: 'توليد نغمة موسيقية ثابتة', concept: 'استخدام دالة tone() لتوليد نغمة بتردد ثابت لمدة 250 مللي ثانية.' },
+            { level: 'مبتدئ', id: 22, title: 'الكشف الأساسي عن IR', concept: 'استقبال إشارة من ريموت IR وتغيير حالة LED (ON/OFF).' },
+            { level: 'مبتدئ', id: 23, title: 'عرض نص ثابت على LCD', concept: 'عرض رسالة "hello, world!" على شاشة LCD حرفية 16x2 في السطر الأول.' },
+            { level: 'مبتدئ', id: 24, title: 'وميض LED على NodeMCU', concept: 'تشغيل LED المدمج (LED_BUILTIN) على بوردة NodeMCU (ESP8266).' },
+            { level: 'مبتدئ', id: 25, title: 'NodeMCU تهيئة اتصال Wi-Fi', concept: 'برمجة NodeMCU للاتصال بشبكة Wi-Fi محددة (SSID/Password) مع التحقق من حالة الاتصال.' },
+            
+            // 2. مشاريع المستوى المتوسط (Intermediate) - 25 مشروعًا
+            { level: 'متوسط', id: 26, title: 'استخدام المقاومة الرافعة الداخلية', concept: 'إلغاء المقاومة الخارجية واستخدام المقاومة الرافعة الداخلية عبر الأمر digitalWrite(inputPin, HIGH).' },
+            { level: 'متوسط', id: 27, title: 'قياس معدل الدوران الأساسي', concept: 'قراءة معدل الدوران من حساس LISY300AL على الطرف القياسي 0 وعرض القيمة على السيريال.' },
+            { level: 'متوسط', id: 28, title: 'تحويل القراءة إلى نسبة مئوية', concept: 'قراءة قيمة المقاومة المتغيرة (0-1023) وتحويلها إلى نسبة مئوية (0-100) باستخدام دالة map.' },
+            { level: 'متوسط', id: 29, title: 'التحكم في الإضاءة عبر LDR', concept: 'قراءة المقاومة الضوئية (LDR) واستخدام القيمة المقروءة لتغيير معدل وميض LED.' },
+            { level: 'متوسط', id: 30, title: 'مراقبة الحركة (PIR Sensor)', concept: 'استخدام حساس الحركة SEN-08630 لتشغيل LED عند اكتشاف حركة وإيقافه بعد 500 مللي ثانية.' },
+            { level: 'متوسط', id: 31, title: 'نظام إنذار بالاهتزاز', concept: 'استخدام حساس البيزوالكتريك لتشغيل LED إذا تجاوزت القراءة عتبة محددة (THRESHOLD = 100).' },
+            { level: 'متوسط', id: 32, title: 'قياس المسافة بالموجات فوق الصوتية', concept: 'استخدام حساس Ping))) Sensor لحساب المسافة بالـ cm وتطبيقها على دالة التأخير.' },
+            { level: 'متوسط', id: 33, title: 'قياس درجة الحرارة وتحويلها', concept: 'قراءة LM35 وتحويل القيمة إلى درجتي مئوية وفهرنهايت.' },
+            { level: 'متوسط', id: 34, title: 'تصميم مخطط أعمدة (Bar Graph)', concept: 'استخدام دالة map لربط قراءة المستشعر القياسي بمستوى الإضاءة لـ 6 ليدات.' },
+            { level: 'متوسط', id: 35, title: 'ضبط سطوع LED (Fade)', concept: 'التحكم في سطوع 3 ليدات بالتتابع باستخدام PWM ودالة analogWrite.' },
+            { level: 'متوسط', id: 36, title: 'تشغيل موتور سيرفو بالمقاومة المتغيرة', concept: 'ربط القراءة القياسية (0-1023) للمقاومة المتغيرة بزاوية السيرفو (0-180).' },
+            { level: 'متوسط', id: 37, title: 'التحكم في سرعة موتور DC (PWM)', concept: 'التحكم في سرعة دوران موتور DC عبر PWM المطبق على طرف التمكين (EN Pin) في قنطرة H.' },
+            { level: 'متوسط', id: 38, title: 'عزف مقطوعة موسيقية (Twinkle Star)', concept: 'استخدام مصفوفات النغمات لبرمجة الأردوينو لعزف أغنية "Twinkle, Twinkle Little Star".' },
+            { level: 'متوسط', id: 39, title: 'عرض "Hello World" متكامل', concept: 'عرض النص الثابت وعرض عدد الثواني المنقضية منذ التشغيل على شاشة LCD.' },
+            { level: 'متوسط', id: 40, title: 'التحكم في العرض والمؤشر', concept: 'التحكم في وميض المؤشر (lcd.blink) وإيقاف العرض كلياً (lcd.noDisplay).' },
+            { level: 'متوسط', id: 41, title: 'قياس زمن حدث (Duration)', concept: 'استخدام دالة millis() لقياس مدة بقاء مفتاح مضغوطاً.' },
+            { level: 'متوسط', id: 42, title: 'عرض بيانات الساعة الرقمية', concept: 'استخدام مكتبة Time.h لعرض الوقت والتاريخ بشكل ساعة رقمية.' },
+            { level: 'متوسط', id: 43, title: 'قياس طول النبضة (Pulse Width)', concept: 'استخدام دالة pulseIn() لقياس طول النبضات العالية والمنخفضة (Pulse Width).' },
+            { level: 'متوسط', id: 44, title: 'ضبط الوقت عبر الأزرار', concept: 'استخدام زرين لتقديم وتأخير الوقت، مع زيادة معدل الخطوة كلما طال الضغط.' },
+            { level: 'متوسط', id: 45, title: 'جدولة مهمة لمرة واحدة', concept: 'استخدام Alarm.timerOnce لجدولة مهمة تنفذ بعد 10 ثوانٍ.' },
+            { level: 'متوسط', id: 46, title: 'إعداد NodeMCU كنقطة اتصال', concept: 'إعداد NodeMCU كنقطة وصول (Soft Access Point) للتمهيد للإعدادات.' },
+            { level: 'متوسط', id: 47, title: 'قراءة DH11 على السيريال (NodeMCU)', concept: 'قراءة بيانات DH11 وعرض الحرارة والرطوبة على البوابة التسلسلية لـ NodeMCU.' },
+            { level: 'متوسط', id: 48, title: 'عرض نص وعناصر على OLED', concept: 'تهيئة شاشة OLED (SSD1306) وعرض رسالة ثابتة عليها .' },
+            { level: 'متوسط', id: 49, title: 'تخزين النصوص في الذاكرة الفلاش', concept: 'تخزين النص المراد عرضه (مثل رسالة Marquee) في الذاكرة الفلاش الخاصة بالأردوينو.' },
+            { level: 'متوسط', id: 50, title: 'قراءة حساس الحركة (الاهتزاز)', concept: 'استخدام حساس البيزوالكتريك للتحكم في موتور اهتزاز (Vibration) عند اكتشاف ضوء يتجاوز المستوى المحيط.' },
+
+            // 3. مشاريع المستوى المتقدم (Advanced) - 25 مشروعًا
+            { level: 'متقدم', id: 51, title: 'تجنب القراءة الخاطئة (Debounce Logic)', concept: 'تطبيق منطق Debounce في دالة منفصلة للتأكد من استقرار حالة المفتاح قبل تسجيل القراءة.' },
+            { level: 'متقدم', id: 52, title: 'عدّاد ضغطات المفتاح مع معدلات زيادة', concept: 'تحديد عدد مرات الضغط وحساب مدة الضغط لتغيير معدل الزيادة (Fast Increment / Very Fast Increment).' },
+            { level: 'متقدم', id: 53, title: 'قياس جهد عالٍ (Voltage Divider)', concept: 'قياس جهد يصل إلى 10 فولت باستخدام قاعدة مقسم الجهد (R1=1K, R2=1K) وحساب عامل المقاومات.' },
+            { level: 'متقدم', id: 54, title: 'قراءة لوحة مفاتيح (Keypad) متكاملة', concept: 'قراءة لوحة مفاتيح 4x3 وتطبيق منطق Debounce الداخلي عند اكتشاف المفتاح.' },
+            { level: 'متقدم', id: 55, title: 'Night Rider على ليدات عادية', concept: 'تنفيذ تطبيق Night Rider (الإضاءة المتنقلة) على 6 ليدات عادية.' },
+            { level: 'متقدم', id: 56, title: 'تشغيل مجموعة 7-Segment بالمضاعفة', concept: 'تشغيل 4 وحدات 7-Segment باستخدام تقنية المضاعفة (Multiplexing).' },
+            { level: 'متقدم', id: 57, title: 'تشغيل 7-Segment باستخدام MAX7221', concept: 'استخدام مسجل الإزاحة MAX7221 عبر بروتوكول SPI لتبسيط التحكم في 7-Segment.' },
+            { level: 'متقدم', id: 58, title: 'التحكم في موتورين باستخدام H-Bridge', concept: 'التحكم في اتجاه دوران موتورين منفصلين (Motor 1 و Motor 2) باستخدام قنطرة H مزدوجة.' },
+            { level: 'متقدم', id: 59, title: 'التحكم في سرعة واتجاه موتور DC بالـ H-Bridge', concept: 'التحكم في سرعة (PWM) واتجاه (IN1/IN2) موتور DC عبر الأوامر التسلسلية.' },
+            { level: 'متقدم', id: 60, title: 'تشغيل موتور خطوة ثنائي القطبية (Stepper)', concept: 'التحكم في موتور خطوة Bipolar باستخدام قنطرة H (L293) ومكتبة Stepper.h.' },
+            { level: 'متقدم', id: 61, title: 'التحكم في سرعة موتور بدون فرش', concept: 'استخدام طريقة التحكم بالسيرفو للتحكم في سرعة موتور Brushless DC Motor (مثل مواتير ألعاب التحكم عن بعد).' },
+            { level: 'متقدم', id: 62, title: 'توليد نغمتين متزامنتين', concept: 'استخدام مكتبة Tone.h لإنشاء كائنين من النوع Tone وتشغيل نغمتين في نفس الوقت.' },
+            { level: 'متقدم', id: 63, title: 'فك تشفير رموز الريموت', concept: 'استقبال إشارة IR وعرض نوع البروتوكول (SONY/NEC) وقيمة الكود السداسية عشرية (results.value, HEX).' },
+            { level: 'متقدم', id: 64, title: 'إرسال أكواد الريموت (Sony)', concept: 'استخدام IR LED لإرسال كود ريموت محدد (Sony Protocol 32-bit) باستخدام الأكواد المخزنة.' },
+            { level: 'متقدم', id: 65, title: 'Marquee Effect لنص طويل', concept: 'تنفيذ خاصية Marquee لمرور النصوص الطويلة جداً التي تتجاوز سعة الشاشة.' },
+            { level: 'متقدم', id: 66, title: 'عرض رمز مخصص متحرك', concept: 'إنشاء رمز مخصص (Custom Character) لتمثيل وجه سعيد/حزين وتطبيق حركة وميض (Animation) بسيطة.' },
+            { level: 'متقدم', id: 67, title: 'عرض مخطط أعمدة على LCD نصية', concept: 'استخدام الرموز المخصصة لعرض مخطط أعمدة (Bar Chart) يعكس قيمة قياسية على شاشة LCD حرفية.' },
+            { level: 'متقدم', id: 68, title: 'ضبط الوقت عبر السيريال (Timestamp)', concept: 'استقبال قيمة Timestamp (10 أرقام تبدأ بـ \'T\') عبر السيريال لضبط ساعة الأردوينو.' },
+            { level: 'متقدم', id: 69, title: 'التحكم بمعدل الضبط الزمني عبر Pot', concept: 'استخدام مقاومة متغيرة لربط قراءتها بمعدل تغيير الوقت (زيادة/نقصان) عند الضغط على زر الضبط.' },
+            { level: 'متقدم', id: 70, title: 'جدولة مهام متكررة يومياً', concept: 'استخدام Alarm.alarmRepeat لجدولة مهام تتكرر يوميًا في وقت محدد (8:30am و 5:45pm).' },
+            { level: 'متقدم', id: 71, title: 'التحكم في BlinkM عبر I2C', concept: 'استخدام بروتوكول I2C للتحكم في موديول BlinkM RGB LED وإرسال قيم الألوان (R, G, B).' },
+            { level: 'متقدم', id: 72, title: 'تشغيل وحدة RTC عبر I2C', concept: 'قراءة الوقت والتاريخ من وحدة RTC (DS1307) عبر I2C (العنوان 0x68).' },
+            { level: 'متقدم', id: 73, title: 'قراءة بيانات DH11 وعرضها على OLED', concept: 'تهيئة NodeMCU وشاشة OLED (SSD1306) لعرض قراءات الحرارة والرطوبة محلياً .' },
+            { level: 'متقدم', id: 74, title: 'إعداد خادم ويب بسيط على NodeMCU', concept: 'تهيئة NodeMCU كخادم ويب والاستجابة لطلب HTTP GET الأساسي .' },
+            { level: 'متقدم', id: 75, title: 'إعداد قاعدة بيانات MySql (SQL)', concept: 'تنفيذ أمر SQL لإنشاء جدول dht11_sensorlog يحتوي على أعمدة للحرارة والرطوبة و الطابع الزمني (TIMESTAMP).' },
+            
+            // 4. مشاريع المستوى الخبير (Expert) - 25 مشروعًا
+            { level: 'خبير', id: 76, title: 'قراءة 8 قيم قياسية بـ Multiplexer', concept: 'استخدام الدائرة المتكاملة 4051 multiplexer لقراءة 8 قيم قياسية عبر طرف واحد (A0).' },
+            { level: 'خبير', id: 77, title: 'قراءة الحركة الدورانية (Rotary Encoder) متعددة', concept: 'تعقب حركة أكثر من حساس دوران (Encoder) في نفس الوقت باستخدام تحديث الموضع في حلقة for.' },
+            { level: 'خبير', id: 78, title: 'روبوت تتبع الضوء', concept: 'التحكم في اتجاه وسرعة دوران موتورين (باستخدام H-Bridge) بناءً على قراءات حساسات الإضاءة (LDR).' },
+            { level: 'خبير', id: 79, title: 'عرض صور متحركة على LED Matrix', concept: 'تخزين صور bitmaps لإنشاء تأثير حركي (مثل القلب النابض) وعرضه باستخدام تقنية Multiplexing.' },
+            { level: 'خبير', id: 80, title: 'تأثير Night Rider على TLC5940', concept: 'استخدام الدائرة TLC5940 لزيادة تيار الخرج وتطبيق تأثير Night Rider على 16 قناة.' },
+            { level: 'خبير', id: 81, title: 'التحكم في الكاميرا (Intervalometer)', concept: 'استخدام الأردوينو كـ Intervalometer للتحكم في غالق العدسة و التركيز لكاميرا رقمية.' },
+            { level: 'خبير', id: 82, title: 'جهاز تحكم في الأجهزة عبر IR (Optocoupler)', concept: 'استخدام الأوبتوكوبلر مع الريموت للتحكم في تشغيل وإطفاء جهاز كهربائي خارجي.' },
+            { level: 'خبير', id: 83, title: 'تشغيل ملفات WAV باختيار يدوي', concept: 'تهيئة WaveShield وتشغيل ملف WAV محدد من بطاقة SD بناءً على قراءة المقاومة المتغيرة.' },
+            { level: 'خبير', id: 84, title: 'عرض أرقام بحجم مضاعف (Double-Height)', concept: 'تصميم وعرض الأرقام بحجم مضاعف (Double-height digits) على شاشة LCD نصية.' },
+            { level: 'خبير', id: 85, title: 'عرض صورة على GLCD', concept: 'استخدام شاشة GLCD لعرض صور نقطية (bitmaps) مخزنة في ملفات مخصصة.' },
+            { level: 'خبير', id: 86, title: 'الكتابة والقراءة من I2C EEPROM', concept: 'استخدام دالة I2CEEPROM_Write و I2CEEPROM_Read لتخزين البيانات بشكل دائم على ذاكرة 24LC128 الخارجية.' },
+            { level: 'خبير', id: 87, title: 'قراءة حساس TMP75 متعدد', concept: 'قراءة بيانات درجة الحرارة من أكثر من حساس TMP75 رقمي على نفس مسار I2C.' },
+            { level: 'خبير', id: 88, title: 'تحكم I2C في مخطط أعمدة', concept: 'استخدام وحدة PCF8574 (Port Expander) عبر I2C لتشغيل 8 ليدات كمخطط أعمدة.' },
+            { level: 'خبير', id: 89, title: 'تشغيل 4 وحدات 7-Segment بـ I2C', concept: 'استخدام متحكم عرض LedDrive (0x38) لتشغيل 4 وحدات 7-Segment عبر I2C.' },
+            { level: 'خبير', id: 90, title: 'تواصل بين وحدتي أردوينو (Master/Slave)', concept: 'إعداد وحدتي أردوينو لتبادل البيانات عبر بروتوكول I2C (Master/Slave).' },
+            { level: 'خبير', id: 91, title: 'تفسير حركة Wiichuck (I2C)', concept: 'قراءة بيانات Wiichuck عبر I2C وتحويلها لتمثيل خطي لاتجاه الميل على شاشة (Processing).' ,' مفهوم' : 'استخدام حساس العجلة Wiichuck'},
+            { level: 'خبير', id: 92, title: 'توليد نقطة وصول بإعداد ديناميكي', concept: 'استخدام مكتبة WiFiManager لإنشاء صفحة ويب إعداد ديناميكية لشبكة NodeMCU .' },
+            { level: 'خبير', id: 93, title: 'تصميم واجهة خادم ويب متجاوبة', concept: 'بناء صفحة ويب متجاوبة (Responsive) لعرض بيانات DH11 باستخدام وسم meta وعناصر Font Awesome .' },
+            { level: 'خبير', id: 94, title: 'تحديث البيانات عبر AJAX', concept: 'استخدام JavaScript (AJAX) لتحديث قيم الحرارة والرطوبة على صفحة الويب كل 10 ثوانٍ .' },
+            { level: 'خبير', id: 95, title: 'تنفيذ دالة المعالج (Processor Function)', concept: 'تنفيذ دالة processor() في كود NodeMCU لربط المتغيرات الوهمية في HTML (مثل %TEMPERATURE%) بالقيم الحقيقية .' },
+            { level: 'خبير', id: 96, title: 'إرسال البيانات إلى DB عبر HTTP POST', concept: 'استخدام مكتبة ESP8266HTTPClient في NodeMCU لإرسال بيانات DH11 عبر طلب HTTP POST إلى سكريبت PHP.' },
+            { level: 'خبير', id: 97, title: 'التحقق من نجاح تحميل البيانات', concept: 'التحقق في كود NodeMCU من أن رمز استجابة HTTP هو 200 بعد إرسال طلب POST.' },
+            { level: 'خبير', id: 98, title: 'عرض البيانات الحية من MySql (PHP)', concept: 'استخدام استعلام SQL لجلب أحدث سجل واحد (LIMIT 1) وعرضه على صفحة PHP.' },
+            { level: 'خبير', id: 99, title: 'تحديث صفحة DB تلقائيًا', concept: 'استخدام وسم meta في صفحة PHP لفرض تحديث تلقائي للمتصفح كل 1 ثانية.' },
+            { level: 'خبير', id: 100, title: 'عرض الرموز الخاصة على OLED', concept: 'استخدام ترميز cp437 في شاشة OLED (SSD1306) لعرض رموز خاصة مثل رمز الدرجة المئوية (°) .' },
+        ];
+
+
+        const curriculumData = [
+            // --- الجزء 1 ---
+            {
+                id: 1,
+                title: "المقدمة وبوردات Arduino وبيئة التطوير الأساسية",
+                category: "basics",
+                content: {
+                    explanation: `
+                        <h3>الأهمية ومفهوم التصميم السريع</h3>
+                        <p>تُعد بوردة الأردوينو من الأدوات المهمة في عملية التصميم السريع (Fast Prototyping). وهي تسهل دورة التصميم التي كانت تتطلب سابقاً تصميم دائرة الميكروكونترولر ثم برمجتها بشكل منفصل.</p>
+                        <h3>آلية عمل البرامج (السكتش)</h3>
+                        <p>يقوم المبرمج بكتابة التطبيق بلغة C، ويُسمى هذا التطبيق سكتش. يتم تحويل السكتش إلى كود ثنائي (Binary Code)، وهو ملف بامتداد hex. يتم إرسال هذا الكود عبر bootloader (كود التحميل) الموجود على الميكروكونترولر، مما يلغي الحاجة إلى جهاز برمجة خاص.</p>
+                        <h3>التطوير المتقدم والبروتوكولات</h3>
+                        <p>يمكن كتابة تطبيقات متقدمة باستخدام لغات مثل Visual Basic .NET أو C#. وتتيح تطبيقات ويندوز يونيفريسال (Windows Universal) التحكم في جميع أطراف الميكروكونترولر (pins). يمكن أيضاً كتابة تطبيقات سطح المكتب (desktop) للتحكم في الأردوينو باستخدام بروتوكول Firmata أو لغة جافا.</p>
+                        <h3>أنواع البوردات المميزة</h3>
+                        <p>تتنوع بوردات الأردوينو في الحجم والسرعة وعدد أطراف الإدخال والإخراج. بوردة Arduino Uno تعتمد على الميكروكونترولر ATmega328. بوردة Arduino Mega ADK يمكنها الاتصال بأجهزة الأندرويد. بوردة Arduino Leonardo تظهر للكمبيوتر كـ فأرة (Mouse) أو لوحة مفاتيح (Keyboard). بوردة Arduino Yun تتميز بوجود نظام تشغيل Linino (من توزيعات لينكس) وتتصل بالإنترنت عبر الواي فاي أو كابل كات.</p>
+                        <h3>إعداد بيئة التطوير</h3>
+                        <p>يتم تنزيل بيئة تطوير الأردوينو من المسارات المحددة (arduino.org/downloads أو arduino.cc/en/Main/software). بعد التثبيت، يتم تعريف البوردة على مدير الأجهزة ببوابة السيريال (Serial Port) مثل com5.</p>
+                        <h3>تطوير في Visual Studio</h3>
+                        <p>يمكن تطوير تطبيقات الأردوينو باستخدام بيئة Visual Studio (مثل نسخة 2019) عن طريق تثبيت تطبيق visual micro.</p>
+                        <h3>كود Blink الأساسي</h3>
+                        <p>ينقسم الكود إلى جزأين: setup() (لإعداد الأطراف، يُنفذ مرة واحدة) و loop() (الحلقة، تُنفذ باستمرار). يتم ضبط الطرف 13 كطرف إخراج (pinMode(13, OUTPUT)). يتم إضاءة الليد باستخدام digitalWrite(13, HIGH) (وهو جهد 5 فولت)، ثم الانتظار 1000 مللي ثانية، ثم الإطفاء بـ digitalWrite(13, LOW).</p>
+                        <h3>الاتصال التسلسلي (UART)</h3>
+                        <p>يتم توفيره عبر الطرفين 0 (RX) و 1 (TX). يتم تهيئة سرعة الاتصال التسلسلي (البوابة COM) باستخدام الأمر Serial.begin(9600).</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>مشكلة التصميم السريع (Fast Prototyping).</li>
+                            <li>تطوير تطبيقات سطح المكتب (Visual Studio).</li>
+                            <li>محاكاة أجهزة الإدخال (Leonardo).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>Fast Prototyping</li>
+                            <li>Bootloader</li>
+                            <li>Sketch (الكود)</li>
+                            <li>Firmata Protocol</li>
+                            <li>Visual Micro</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>التحكم الأساسي في وميض LED (تطبيق Blink محسّن).</li>
+                            <li>تصميم واجهة تحكم سطح المكتب (Desktop Control) بلغة C#.</li>
+                            <li>مشروع التواصل مع الكمبيوتر عبر Firmata.</li>
+                            <li>محاكاة جهاز إدخال (Arduino Leonardo) كفأرة أو لوحة مفاتيح.</li>
+                            <li>تطوير ومراقبة الأداء في Visual Studio.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود تطبيق الوميض (Blink) الأساسي:
+
+// دالة الإعداد (setup): يتم تنفيذها مرة واحدة، وتُهيئ الطرف 13 كطرف إخراج (OUTPUT).
+void setup() { 
+    // initialize digital pin 13 as an output. 
+    pinMode(13, OUTPUT); 
+}
+
+// دالة الحلقة (loop): تُنفذ باستمرار، وتقوم بإضاءة الليد وإطفائه بفارق زمني (1000 مللي ثانية).
+void loop() { 
+    digitalWrite(13, HIGH); // turn the LED on 
+    delay(1000); // wait for a second 
+    digitalWrite(13, LOW); // turn the LED off 
+    delay(1000); // wait for a second 
+}
+</code></pre>
+                    `,
+                    question: `
+                        <p>بالنظر إلى أن بوردة Arduino Leonardo تظهر للكمبيوتر كـ فأرة (Mouse) أو لوحة مفاتيح (Keyboard)، وكيفية تطوير التطبيقات باستخدام Visual Studio؛ صف الإجراءات البرمجية والبيئية اللازمة لاستخدام بوردة ليوناردو للتحكم في سرعة موتور DC عن طريق إرسال أوامر تسلسلية من الكمبيوتر، مع شرح بروتوكول Firmata وكيف يلغي الحاجة لجهاز برمجة خاص؟</p>
+                    `
+                }
+            },
+            // --- الجزء 2 ---
+            {
+                id: 2,
+                title: "إعداد بيئة عمل Proteus",
+                category: "basics",
+                content: {
+                    explanation: `
+                        <h3>أهمية البيئة</h3>
+                        <p>تُعتبر بيئة عمل تطبيق بروتس (Proteus) من أهم الأدوات في مجال الإلكترونيات والميكروكونترولر، حيث تمكن المستخدم من تشغيل التجارب والمحاكاة بدون شراء مكونات فعلية.</p>
+                        <h3>صفحات المشروع</h3>
+                        <p>عند إنشاء مشروع جديد (New Project) وتصميم مخطط إلكتروني، تظهر صفحات رئيسية للمشروع، بما في ذلك: Schematic Capture (لرسم المخطط)، و PCB Layout (لتصميم الدائرة المطبوعة).</p>
+                        <h3>Visual Designer (مصمم خريطة التتابع)</h3>
+                        <p>هي الصفحة المخصصة لتصميم خريطة التتابع (Flow Chart) للبرنامج.</p>
+                        <h3>تشغيل تطبيق الوميض (Blinking Led)</h3>
+                        <p>بعد اختيار add prefiral واختيار مكون مثل groove LED، يتم سحب دالة toggle إلى قسم loop في خريطة السريان. يتم سحب دالة التأخير الزمني وضبطها على الزمن المطلوب (مثلاً 3 ثواني).</p>
+                        <h3>إجراء المحاكاة</h3>
+                        <p>للتشغيل، يتم التوجه إلى قائمة schematic capture والضغط على زر التشغيل (Run)، وملاحظة أن الليد يضيء ويتوقف بالزمن المحدد.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>اختبار الدوائر الافتراضي.</li>
+                            <li>تصميم مخطط التتابع.</li>
+                            <li>تصميم اللوحة المطبوعة (PCB).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>Schematic Capture</li>
+                            <li>PCB Layout</li>
+                            <li>Visual Designer (Flow Chart)</li>
+                            <li>محاكاة الميكروكونترولر</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>تطبيق Blink بالمحاكاة.</li>
+                            <li>تصميم مخطط تتابع لـ Delay.</li>
+                            <li>محاكاة دائرة مفتاح وإضاءة.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-text">
+لا يوفر المصدر كود C مباشرًا في هذا القسم، 
+بل يشرح خطوات الإعداد والتحكم الرسومي في بيئة Proteus.
+</code></pre>
+                    `,
+                    question: `
+                        <p>في بيئة Proteus، إذا كنت تستخدم Visual Designer لإنشاء مخطط تتابع (Flow Chart) يقوم بتنفيذ عملية Debounce (تجنب القراءة الخاطئة للمفتاح) قبل تشغيل LED. اشرح كيف يمكن دمج دالة التأخير الزمني (Delay) المحددة بـ 3 ثوان في هذا المخطط، وما هي المكونات الرئيسية التي يجب إضافتها لـ Schematic Capture للمحاكاة الناجحة؟</p>
+                    `
+                }
+            },
+            // --- الجزء 3 ---
+            {
+                id: 3,
+                title: "قراءة الإشارات الرقمية والقياسية الأساسية",
+                category: "basics",
+                content: {
+                    explanation: `
+                        <h3>أنواع المدخلات</h3>
+                        <p>الإشارات الرقمية (Digital Signals) تستشعر وجود أو عدم وجود الجهد (High/Low). الإشارات القياسية (Analog Signals) تقيس مدى معيناً من الجهود (مثل قراءة فوليم الصوت أو إشارة من حساس).</p>
+                        <h3>أطراف الإدخال/الإخراج</h3>
+                        <p>الأطراف الرقمية مرقمة من 0 حتى 13. الأطراف القياسية (Analog Pins) مرقمة من A0 حتى A5، ويمكن استخدامها كأطراف رقمية من 14 حتى 19.</p>
+                        <h3>مقاومات الرفع/الخفض</h3>
+                        <p>تُستخدم لتجنب القراءة الخاطئة للأطراف الرقمية (Digital Pins). مقاومة الرفع (Pull up Resistor) ترفع الجهد إلى 5 فولت. مقاومة الخفض (Pull down Resistor) تخفضه إلى 0 فولت. قيمتها عادة 4.7K أوم. يمكن تفعيل مقاومة الرفع الداخلية باستخدام الأمر digitalWrite(inputPin, HIGH).</p>
+                        <h3>قراءة المفتاح وتجنب التذبذب</h3>
+                        <p>تُستخدم الدالة digitalRead لتحديد حالة المفتاح (HIGH أو LOW). لتجنب أخطاء القراءة الناتجة عن تذبذب الإشارة، يتم تطبيق منطق Debounce، والذي يتضمن الانتظار فترة زمنية محددة حتى تستقر حالة القراءة (مثل 10 مللي ثانية).</p>
+                        <h3>تحديد مدة الضغط</h3>
+                        <p>يتم تحديد عدد مرات الضغط على المفتاح باستخدام دالة switchTime() التي تُرجع مدة ضغط المفتاح بالمللي ثانية. يتم زيادة العداد بمعدلات مختلفة (مثل إضافة 10) إذا تجاوزت المدة veryFastIncrement.</p>
+                        <h3>تحويل مدى القيم (Map)</h3>
+                        <p>لتحويل المدى المقروء من الأطراف القياسية (0-1023) إلى مدى آخر مطلوب (مثل 0-100)، تُستخدم الدالة map.</p>
+                        <h3>قراءة أكثر من 6 قيم قياسية</h3>
+                        <p>يتم استخدام الدائرة المتكاملة 4051 multiplexer، التي تسمح بقراءة 8 قيم قياسية عبر طرف قياسي واحد فقط. يتم اختيار القيمة للقراءة بناءً على مدخلات S0, S1, S2.</p>
+                        <h3>قراءة جهد أكبر من 5 فولت</h3>
+                        <p>يجب استخدام قاعدة مقسم الجهد (Voltage Divider) باستخدام مقاومتين (R1, R2). معادلة حساب الجهد هي: Volts=(analog reading/analog steps)×Reference voltage
+. يتم حساب معامل المقاومات (resistorFactor) الذي يستخدم لضرب قيمة القراءة.</p>
+                        <h3>الاستجابة للتغير في الجهد</h3>
+                        <p>يمكن تصميم دائرة لعمل "فلاش" لـ LED عند تخطي الجهد المقروء عتبة تحذير محددة (warningThreshold).</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>تحديد حالة مفتاح.</li>
+                            <li>تجنب أخطاء المفاتيح (Debounce).</li>
+                            <li>قياس مدى جهد محدد (0-5 فولت).</li>
+                            <li>توسيع الإدخال القياسي (4051 Multiplexer).</li>
+                            <li>قراءة جهد عالي (أكبر من 5 فولت).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>Pull-up/Pull-down Resistor</li>
+                            <li>Debounce</li>
+                            <li>Voltage Divider</li>
+                            <li>دالة map()</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>نظام مضاد للتذبذب (Debounce).</li>
+                            <li>آلة حاسبة بسيطة بلوحة مفاتيح (Keypad).</li>
+                            <li>جهاز تحذير تجاوز الجهد.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود قراءة المفتاح
+int val = digitalRead(inputPin); // read input value 
+if (val == HIGH) { 
+    digitalWrite(ledPin, HIGH); 
+} else { 
+    digitalWrite(ledPin, LOW); 
+}
+
+// كود استخدام دالة Map
+val = analogRead(potPin); // val ranges from 0 to 1023 
+percent = map(val,0,1023,0,100); // percent will range from 0 to 100.
+</code></pre>
+                    `,
+                    question: `
+                        <p>أنت مطالب بتصميم نظام لقياس جهد بطارية يصل إلى 20 فولت باستخدام طرف واحد (Analog Pin 0). صف كيف يمكنك استخدام قاعدة مقسم الجهد (Voltage Divider) لتجنب تلف الأردوينو (5 فولت)، ثم استخدم دالة map لتحويل القراءة إلى مدى من 0 إلى 100، مع تطبيق منطق Debounce على المفتاح الذي يبدأ عملية القراءة.</p>
+                    `
+                }
+            },
+            // --- الجزء 4 ---
+            {
+                id: 4,
+                title: "تطبيقات حساسات الحركة والضوء",
+                category: "basics",
+                content: {
+                    explanation: `
+                        <h3>أنواع إشارات الحساسات</h3>
+                        <p>قد تكون الإشارات رقمية (Digital on/off) مثل حساس الميل. أو قياسية (Analog) مثل حساسات الحرارة. أو إشارة عرض متغير (Pulse width) مثل حساس المسافة. أو بيانات تسلسلية (serial). أو عبر بروتوكولات I2C, SPI.</p>
+                        <h3>التنبؤ بالميل والاهتزاز</h3>
+                        <p>يتم توصيل حساس الميل (tilet sensor) بنفس طريقة المفتاح العادي. وللإحساس بالاهتزاز (shaken)، يتم قياس مدة تغير حالة الحساس باستخدام دالة millis().</p>
+                        <h3>التنبؤ بالإضاءة والحركة</h3>
+                        <p>يتم استخدام المقاومة الضوئية (LDR). قيمة القراءة القياسية (rate) تحدد مدة التأخير الزمني لتشغيل وإطفاء LED. للتنبؤ بالحركة، يستخدم حساس PIR (SEN-08630)، حيث تكون القراءة HIGH عند اكتشاف الحركة.</p>
+                        <h3>قياس المسافة</h3>
+                        <p>حساس Ping))) يستخدم دالة pulseIn لقياس مدة النبضة المرتدة، ويتم التحويل إلى سنتيمتر (29 ميكروثانية لكل سنتيمتر، ثم يتم قسمة النتيجة على 2). حساس Sharp GP2Y0A02YK0F يستخدم الأشعة تحت الحمراء لدقة أعلى، ويتم ترجمة الجهد الناتج (mV) إلى مسافة (cm) باستخدام جدول مرجعي (TABLE_ENTRIES).</p>
+                        <h3>الصوت والتصفيق</h3>
+                        <p>يمكن استخدام حساس البيزوالكتريك (Piezo) للكشف عن الاهتزاز أو النقر. أو استخدام ميكروفون لقياس مستوى الصوت، حيث يتم حساب متوسط القراءات المربعة (sumOfSquares/numberOfSamples) ومقارنته بـ threshold.</p>
+                        <h3>قياس وضبط درجة الحرارة</h3>
+                        <p>LM35 يعطي 10mV لكل درجة مئوية. LM335 يعطي الجهد المكافئ لدرجة الحرارة بـ الكيلفن. يمكن ضبط إخراج رقمي (outPin) إذا تجاوزت الحرارة عتبة محددة (threshold).</p>
+                        <h3>قراءة كروت RFID</h3>
+                        <p>يتم القراءة عبر المنفذ التسلسلي (Serial Port) بسرعة 2400. يتم تعريف بداية الكود بـ startByte (ASCII 10) ونهايته بـ endByte (ASCII 13) لجمع الـ 10 أرقام الخاصة بالتعريف.</p>
+                        <h3>قراءة الحركة الدورانية</h3>
+                        <p>يُستخدم حساس Rotary Encoder. يتم تحديد الاتجاه (زيادة encoderPos أو إنقاصها) عن طريق فحص الأطراف A و B. يمكن تعقب حركة أكثر من حساس.</p>
+                        <h3>تحديد الموقع والدوران</h3>
+                        <p>يتم استخدام موديول GPS EM-406A (سرعة 4800 باود). الجيروسكوب (LISY300AL) يستخدم لقياس الدوران في محورين. لقياس الدوران في 3 محاور، يستخدم موديول ITG-3200 عبر بروتوكول I2C، ويتم إرسال الأوامر عبر دالة itgWrite.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>نظام إضاءة متغير (LDR).</li>
+                            <li>رصد الحركة (PIR).</li>
+                            <li>قياس المسافة بدقة عالية (IR).</li>
+                            <li>تتبع الحركة الدورانية (Rotary Encoder).</li>
+                            <li>قراءة بيانات الموقع (GPS).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>LDR</li>
+                            <li>PIR Sensor</li>
+                            <li>LM35 (10mV per degree Celsius)</li>
+                            <li>Rotary Encoder</li>
+                            <li>ITG-3200 (I2C)</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>نظام قراءة بطاقات الهوية (RFID CARD).</li>
+                            <li>قراءة توصيل الفارة (PS2).</li>
+                            <li>تحديد الموقع باستخدام GPS.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود التنبؤ بالإضاءة (LDR)
+int rate = analogRead(sensorPin); // read analog input 
+digitalWrite(ledPin, HIGH); 
+delay(rate); // wait duration dependent on light level 
+digitalWrite(ledPin, LOW); 
+delay(rate);
+
+// كود قياس درجة الحرارة (LM35)
+float millivolts = (value / 1024.0) * 5000; 
+float celsius = millivolts / 10; // 10mV per degree Celsius
+</code></pre>
+                    `,
+                    question: `
+                        <p>صمم نظاماً لـ المراقبة البيئية والموقعية حيث يتم قياس درجة الحرارة باستخدام حساس LM35 ودمجها مع قراءة الموقع الجغرافي من موديول GPS EM-406A. كيف يمكن برمجياً (في دالة loop) تشغيل LED فقط إذا كانت درجة الحرارة تتجاوز عتبة محددة (Threshold) وفي نفس الوقت كان خط العرض (Latitude) يشير إلى نصف الكرة الجنوبي (Southern Hemisphere)؟</p>
+                    `
+                }
+            },
+            // --- الجزء 5 ---
+            {
+                id: 5,
+                title: "وحدات العرض الأساسية (LEDs ومصفوفات الليدات)",
+                category: "basics",
+                content: {
+                    explanation: `
+                        <h3>قيود التيار وتشغيل الطاقة الكبيرة</h3>
+                        <p>قدرة تشغيل الليد على طرف الأردوينو هي 40mA. لتشغيل ليدات ذات الطاقة الكبيرة (High power LED)، يجب استخدام ترانزستورات مثل 2N222 أو TIP102 لتوصيل تيار أكبر من مصدر خارجي لقاعدة الترانزستور.</p>
+                        <h3>ضبط الإضاءة والألوان</h3>
+                        <p>يتم ضبط الإضاءة باستخدام تقنية PWM عبر دالة analogWrite. للتحكم في الليد الملون (Color LED/RGB)، تُستخدم دالة hueToRGB لتحويل قيمة اللون (Hue) إلى مركبات R, G, B.</p>
+                        <h3>تصميم Bar Graph</h3>
+                        <p>يستخدم لتوضيح شدة قيمة قياسية. يتم تحويل قيمة المستشعر (0-1023) إلى مستوى الإضاءة (ledLevel) باستخدام دالة map لتشغيل العدد المطلوب من الليدات.</p>
+                        <h3>مصفوفة الليدات (Led Matrix)</h3>
+                        <p>تستخدم لعرض الإعلانات قبل ظهور شاشات LCD الكبرى. مصفوفة 8x8 (64 ليد) يتم التحكم بها بـ 16 طرفاً باستخدام تقنية المضاعفة (Multiplexing). يمكن عرض الصور المخزنة كـ bitmaps.</p>
+                        <h3>وحدات 7-Segment</h3>
+                        <p>تستخدم لعرض الأرقام. يتم تعريف مصفوفة numeral لتمثيل أطراف القطع (A-G) لكل رقم. لتشغيل مجموعة من القطع، يتم استخدام تقنية المضاعفة (Multiplexing).</p>
+                        <h3>مسجلات الإزاحة</h3>
+                        <p>MAX7221 و MAX7219 يُستخدمان لتبسيط التحكم في وحدات 7-Segment والمصفوفات عبر بروتوكول SPI. يتم إرسال الأوامر عبر دالة sendCommand.</p>
+                        <h3>زيادة التيار (TLC5940)</h3>
+                        <p>الدائرة المتكاملة TLC5940 تستخدم لزيادة التيار الناتج عن الأردوينو، حيث يمكنها تحويل 3 نقاط تحكم من الأردوينو إلى 16 نقطة إخراج ذات تيار عالٍ.</p>
+                        <h3>مؤشر قياس تناظري</h3>
+                        <p>يمكن قيادة مؤشر قياس تناظري (Analog Meter) عبر طرف PWM في الأردوينو، حيث تُستخدم دالة map لضبط القيمة المخرجة (0-255).</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>التحكم بالسطوع (PWM).</li>
+                            <li>توليد الألوان (RGB).</li>
+                            <li>تصميم بارجراف (Bar Graph).</li>
+                            <li>عرض الرسوم المتحركة (Led Matrix).</li>
+                            <li>العرض الرقمي متعدد الخانات (Multiplexing).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>PWM (analogWrite)</li>
+                            <li>Multiplexing</li>
+                            <li>Shift Registers (MAX7221/MAX7219)</li>
+                            <li>TLC5940 (High Current Driver)</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>تطبيق نايت ريدر (Night Rider).</li>
+                            <li>التحكم في مصفوفة ليدات (Led Matrix).</li>
+                            <li>عرض الرموز الخاصة على شاشة LCD.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود ضبط إضاءة الليد (Fade)
+brightness = brightness + increment; // increment (or decrement) 
+analogWrite(firstLed, brightness); 
+delay(10);
+
+// كود تصميم Bar Graph
+sensorValue = analogRead(analogInPin); 
+ledLevel = map(sensorValue, 0, 1023, 0, NbrLEDs);
+</code></pre>
+                    `,
+                    question: `
+                        <p>إذا كنت تستخدم دائرة TLC5940 لزيادة تيار الخرج في الأردوينو للتحكم في 16 ليد (High Power LED)؛ اشرح كيف تختلف برمجة شدة الإضاءة لهذه الليدات عن استخدام دالة analogWrite العادية، وكيف يمكن تطبيق تأثير Night Rider على جميع قنوات TLC5940؟</p>
+                    `
+                }
+            },
+            // --- الجزء 6 ---
+            {
+                id: 6,
+                title: "التحكم في مواتير السيرفو والملفات الكهرومغناطيسية",
+                category: "hardware",
+                content: {
+                    explanation: `
+                        <h3>مواتير السيرفو</h3>
+                        <p>تختلف عن مواتير DC بأنها تتحرك بزاوية محددة (عادة 180 درجة) ولا تدور باستمرار. يتم التحكم فيها باستخدام مكتبة Servo.h.</p>
+                        <h3>التحكم بالسيرفو</h3>
+                        <p>يتم إرفاق السيرفو بالطرف باستخدام myservo.attach(9). يتم تحديد الزاوية بدقة عبر myservo.write(angle). يمكن ربطها بمقاومة متغيرة (Potentiometer) باستخدام دالة map لربط قيمة القراءة (0-1023) بالزاوية (0-180).</p>
+                        <h3>السيلونويد والريلاي</h3>
+                        <p>السيلونويد (Solenoid) يُستخدم مع المحابس الإلكترونية لفتح أو إغلاق مسار. الريلاي (Relay) يُستخدم للتحكم في الأحمال الكبيرة التي تتطلب تياراً عالياً. يتم تنشيطهما عبر digitalWrite لفترة زمنية محددة.</p>
+                        <h3>التحكم في مواتير DC (H-Bridge)</h3>
+                        <p>دائرة قنطرة H (H-Bridge) تُستخدم للتحكم في اتجاه دوران الموتور. جدول المنطق يوضح أن الاتجاه يتحدد بواسطة أطراف الإدخال IN1 و IN2 (LOW/HIGH أو HIGH/LOW).</p>
+                        <h3>التحكم في السرعة والاتجاه معاً</h3>
+                        <p>يتم التحكم في السرعة عن طريق تطبيق إشارة PWM على طرف التمكين (EN Pin)، بينما يتم تحديد الاتجاه عبر IN1/IN2. يتم ربط السرعة بقيمة رقمية (0-9) تُرسل عبر السيريال مونيتور وتُحوّل إلى قيمة PWM (0-255) باستخدام دالة map.</p>
+                        <h3>روبوت تتبع الضوء</h3>
+                        <p>يتم التحكم في اتجاه حركة الموتور باستخدام حساسات الإضاءة (LDR). يتم معايرة عتبة الإضاءة (sensorThreshold) وتحديد سرعة الموتورين (leftPins, rightPins) بناءً على قراءات الحساس.</p>
+                        <h3>مواتير الخطوة (Stepper Motors)</h3>
+                        <p>تنقسم إلى أحادية القطبية (UniPolar) وثنائية القطبية (Bipolar). يمكن تشغيلها باستخدام قنطرة H (L293 أو L298)، أو باستخدام بوردة EasyDriver. الموتور أحادي القطبية يتم تشغيله باستخدام الدائرة المتكاملة ULN2003A.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>التحكم بالزاوية (0-180 درجة).</li>
+                            <li>التحكم عن طريق الكمبيوتر (Serial).</li>
+                            <li>تشغيل الأجهزة الكبيرة (Relay/Solenoid).</li>
+                            <li>روبوت بالتحكم في الاتجاه والسرعة (H-Bridge).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>Servo.h Library</li>
+                            <li>Solenoid & Relay</li>
+                            <li>H-Bridge (L293/L298)</li>
+                            <li>DC Motor Speed (PWM)</li>
+                            <li>Stepper Motor (UniPolar/Bipolar)</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>التحكم في أكثر من سيرفو.</li>
+                            <li>روبوت تتبع الضوء (LDR + H-Bridge).</li>
+                            <li>تشغيل موتور خطوة (Stepper Motor).</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود تحريك السيرفو
+for(angle = 0; angle < 180; angle += 1) { 
+    myservo.write(angle); 
+    delay(20); 
+}
+
+// كود التحكم في سرعة واتجاه DC Motor (H-Bridge)
+int speed = map(ch, '0', '9', 0, 255); 
+analogWrite(enPin, speed); // Set speed 
+if (ch == '+') { 
+    digitalWrite(in1Pin,LOW); 
+    digitalWrite(in2Pin,HIGH); // CW 
+}
+</code></pre>
+                    `,
+                    question: `
+                        <p>لتصميم روبوت يتتبع الضوء، يتطلب الأمر التحكم في اتجاه وسرعة موتورين (Motor 1 و Motor 2) باستخدام قنطرة H. اشرح كيف تُستخدم قراءات حساسات الإضاءة (LDR) لتحديد ما إذا كان يجب تشغيل الموتورين للأمام أم الدوران (حركة عقارب الساعة CW أو عكسها CCW)، مع تحديد الأطراف المستخدمة للـ PWM لضبط السرعة.</p>
+                    `
+                }
+            },
+            // --- الجزء 7 ---
+            {
+                id: 7,
+                title: "توليد الأصوات والملفات الصوتية",
+                category: "hardware",
+                content: {
+                    explanation: `
+                        <h3>مفهوم توليد النغمات</h3>
+                        <p>يتم تعريف الصوت على أنه مجموعة من النغمات بتردد معين (20 هرتز إلى 20 كيلوهرتز). يتم توليد النغمات باستخدام دالة tone().</p>
+                        <h3>التحكم بالتردد</h3>
+                        <p>يمكن تحديد تردد النغمة عن طريق قراءة قيمة المقاومة المتغيرة (Pot) وتحويلها باستخدام دالة map إلى مدى تردد مطلوب (مثلاً من 100Hz إلى 5000Hz).</p>
+                        <h3>توليد نغمات متعددة</h3>
+                        <p>لتوليد أكثر من نغمة صوتية في نفس الوقت، يجب استخدام مكتبة Tone.h وتعريف كائنات متعددة من النوع Tone.</p>
+                        <h3>توليد صوت وإضاءة متزامنة</h3>
+                        <p>يتم دمج دالة playTone (التي تستخدم delayMicroseconds لتوليد النبضات الصوتية) مع دالة fadeLED (التي تستخدم analogWrite للتحكم في سطوع LED).</p>
+                        <h3>تشغيل ملفات WAV</h3>
+                        <p>يتطلب ذلك استخدام WaveShield وبطاقة SD. يجب تضمين مكتبات مثل FatReader.h و SdReader.h و WaveHC.h. يتم اختيار الملف المراد تشغيله من مصفوفة أسماء الملفات (مثل "1.WAV") بناءً على قراءة مقاومة متغيرة.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>مولد نغمات متغير (Potentiometer).</li>
+                            <li>تزامن المؤثرات (صوت/ضوء).</li>
+                            <li>تعدد الأصوات (Tone.h).</li>
+                            <li>تشغيل الملفات الخارجية (WAV).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>دالة tone()</li>
+                            <li>مكتبة Tone.h</li>
+                            <li>WaveShield</li>
+                            <li>SdReader, WaveHC</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>تشغيل نغمات موسيقية.</li>
+                            <li>تصميم مولد أصوات (Audi Synthizer).</li>
+                            <li>مشغل ملفات WAV.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود توليد نغمات بناءً على قراءة قياسية
+int frequency = map(sensor0Reading, 0, 1023, 100,5000); // map to 100Hz to 5kHz 
+tone(speakerPin, frequency, duration);
+</code></pre>
+                    `,
+                    question: `
+                        <p>إذا كنت تستخدم WaveShield لتشغيل ملفات WAV المخزنة على بطاقة SD، كيف يمكنك استخدام مقاومة متغيرة (Potentiometer) لتحديد أي ملف صوتي يتم تشغيله (من 9 ملفات محددة)؟ وما هي المكتبات الخارجية المطلوبة لتهيئة بطاقة SD وقراءة ملفات الصوت؟</p>
+                    `
+                }
+            },
+            // --- الجزء 8 ---
+            {
+                id: 8,
+                title: "التحكم في الأجهزة عن بعد وشاشات العرض النصية LCD",
+                category: "advanced",
+                content: {
+                    explanation: `
+                        <h3>الإشارة وآلية الإرسال</h3>
+                        <p>معظم أجهزة التحكم عن بعد تستخدم إشارات الأشعة تحت الحمراء (IR). كود الإرسال يتراوح بين 12 و 32 بت. إذا تم الضغط باستمرار، يُرسل كود التكرار.</p>
+                        <h3>الاستقبال وفك التشفير</h3>
+                        <p>يتم استخدام مستقبل IR Receiver (متصل بالطرف 2 عادة) ومكتبة IRremote.h. دالة irrecv.decode(&decodedSignal) تستقبل الرسالة. عند فك التشفير، يتم عرض البروتوكول (مثل NEC, SONY, RC5, RC6) وقيمة الكود السداسية عشرية (hex value) المخزنة في results.value.</p>
+                        <h3>إرسال الإشارات</h3>
+                        <p>يتم إرسال الإشارات باستخدام IR LED (متصل بالطرف 3). وتُستخدم دالة irsend.sendSony() مع الكود السداسي عشري المحدد وطول البت (32 بت).</p>
+                        <h3>التحكم عن بعد في الكاميرا</h3>
+                        <p>يتم استخدام مقترنات ضوئية (Optocouplers) للتحكم في خاصيتي التركيز (focus) و غالق العدسة (shutter). يتم تحديد وقت التعرض (exposureTime) والفاصل الزمني بين اللقطات (interval). تتضمن عملية التقاط الصورة تفعيل التركيز أولاً، ثم الغالق لفترة زمنية محددة.</p>
+                        <h3>التحكم في تشغيل الأجهزة</h3>
+                        <p>يمكن استخدام الريموت للتحكم في تشغيل وإطفاء جهاز خارجي (مثل مقبس) عبر Optocouplers. يتم تفعيل الأوبتوكوبلر لمدة نصف ثانية (500ms) لـ "وميض" (blip) زر التحكم عن بعد.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>اكتشاف الإشارة (IR Detector).</li>
+                            <li>فك تشفير البروتوكول (NEC/SONY).</li>
+                            <li>التحكم عن بعد في الكاميرا.</li>
+                            <li>بث الإشارة (IR LED).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>IRremote.h Library</li>
+                            <li>Decode Type & Hex Value</li>
+                            <li>Optocouplers</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>جهاز "تعلم" أكواد الريموت.</li>
+                            <li>التحكم عن بعد في مقبس كهربائي.</li>
+                            <li>مؤقت تصوير للكاميرا (Intervalometer).</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود تحليل الإشارات المستقبلة
+if (results.decode_type == NEC) { 
+    Serial.print("- decoded NEC: "); 
+} // ... 
+Serial.print("hex value = "); 
+Serial.println( results.value, HEX);
+
+// كود التحكم عن بعد في الكاميرا
+void takePicture(long exposureTime) { 
+    digitalWrite(focus, HIGH); 
+    delay(wakeup); // wait for focus 
+    digitalWrite(shutter, HIGH); 
+    delay(exposureTime); // wait for exposure 
+    digitalWrite(shutter, LOW); 
+    digitalWrite(focus, LOW); 
+}
+</code></pre>
+                    `,
+                    question: `
+                        <p>بعد فك تشفير إشارة ريموت SONY، صف كيف يمكن استخدام هذه القيمة السداسية العشرية (hex value) للتحكم في وظيفتي التركيز (Focus) وغالق العدسة (Shutter) لكاميرا رقمية، مع تحديد المدة الزمنية (Exposure Time) بين اللقطات المتعددة (20 صورة).</p>
+                    `
+                }
+            },
+            // --- الجزء 9 ---
+            {
+                id: 9,
+                title: "وحدات العرض 7-Segment ومسجلات الإزاحة",
+                category: "hardware",
+                content: {
+                    explanation: `
+                        <h3>وحدات LCD الحرفية</h3>
+                        <p>تستخدم متحكم HD44780. يتم تهيئتها باستخدام مكتبة LiquidCrystal.h. يتم ربط 6 أطراف من الأردوينو بالشاشة (RS, E, D4, D5, D6, D7).</p>
+                        <h3>التحكم في المؤشر والعرض</h3>
+                        <p>يمكن التحكم في وميض نقطة الإدخال (cursor) باستخدام lcd.blink() و lcd.noBlink(). ويمكن إيقاف تشغيل العرض بالكامل باستخدام lcd.noDisplay() ثم إعادة تشغيله بـ lcd.display().</p>
+                        <h3>إزاحة النص (Scrolling Text)</h3>
+                        <p>يمكن عمل إزاحة للنص لليمين أو اليسار باستخدام lcd.scrollDisplayRight() و lcd.scrollDisplayLeft(). يتم تطبيق خاصية Marquee لمرور النصوص الطويلة جداً عن طريق الإزاحة اليدوية.</p>
+                        <h3>الرموز الخاصة المدمجة</h3>
+                        <p>يمكن عرض الرموز المدمجة في الشاشة (مثل رمز الدرجة degreeSymbol) عن طريق تعريف قيمتها بالنمط الثنائي (مثل B11011111).</p>
+                        <h3>الرموز المخصصة (Custom Characters)</h3>
+                        <p>يتم إنشاء الرموز غير القياسية (مثل وجه مبتسم happy) عن طريق تعريفها في مصفوفة بايت (8 بايت) باستخدام الأنماط الثنائية. ثم يتم استخدام دالة lcd.createChar لإنشاء الرمز.</p>
+                        <h3>عرض حرف أكبر من الإمكانيات</h3>
+                        <p>يمكن عرض أرقام بحجم مضاعف (Double-height digits) باستخدام خمسة رموز مخصصة.</p>
+                        <h3>وحدات العرض الرسومية (GLCD)</h3>
+                        <p>تستخدم مكتبة glcd.h. تسمح برسم الأشكال الهندسية (مستطيل DrawRect ودائرة DrawCircle). كما يمكن عرض الصور النقطية (bitmaps) المخزنة في ملفات مخصصة.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>عرض الوقت والداتا.</li>
+                            <li>إزاحة النص (Scrolling).</li>
+                            <li>إنشاء رموز غير قياسية (Custom Characters).</li>
+                            <li>العرض الرسومي (GLCD).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>LiquidCrystal Library</li>
+                            <li>Cursor Control (blink/noBlink)</li>
+                            <li>Custom Characters (createChar)</li>
+                            <li>Graphical LCD (GLCD)</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>قائمة تصفح نصية (Scrolling Menu).</li>
+                            <li>تصميم خاصية الماركيي (Marquee effect).</li>
+                            <li>عرض مخطط أعمدة (Bar Chart) على LCD.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود إزاحة النص (Scrolling Text)
+for (int position = 0; position < textLen; position++) { 
+    lcd.scrollDisplayLeft(); 
+    delay(150); 
+}
+
+// كود تصميم رمز خاص (وجه سعيد)
+byte happy = { 
+    B00000, 
+    B10001, 
+    B00000, 
+    B00000, 
+    B10001, 
+    B01110, 
+    B00000, 
+    B00000 
+}; 
+lcd.createChar(0, happy);
+</code></pre>
+                    `,
+                    question: `
+                        <p>لإنشاء رسم بياني عمودي (Bar Chart) على شاشة LCD نصية (16x2) باستخدام الرموز المخصصة (Custom Characters)، اشرح كيف يتم تعريف هذه الرموز في مصفوفة (Array) وكيف تُستخدم دالة lcd.createChar لربط البايتات المُعرَّفة بالمحرف المراد عرضه.</p>
+                    `
+                }
+            },
+            // --- الجزء 10 ---
+            {
+                id: 10,
+                title: "استخدام الوقت والتاريخ وقياس النبضات",
+                category: "advanced",
+                content: {
+                    explanation: `
+                        <h3>أهمية إدارة الوقت والدوال الأساسية</h3>
+                        <p>إدارة الوقت ضرورية لـ توثيق المهام زمنياً (time stamped). دوال التأخير الأساسية هي delay() و delayMicroseconds().</p>
+                        <h3>قياس الزمن وطول النبضة</h3>
+                        <p>دالة millis() تُستخدم لقياس مدة حدث معين (مثل مدة بقاء مفتاح مضغوطاً). دالة pulseIn() تُستخدم لقياس الطول الزمني الدقيق (بالميكروثانية) لنبضة HIGH أو LOW.</p>
+                        <h3>استخدام Arduino كساعة</h3>
+                        <p>يتم استخدام مكتبة Time.h. يتم ضبط الوقت الأولي باستخدام دالة setTime().</p>
+                        <h3>ضبط الوقت عبر السيريال</h3>
+                        <p>يتم استقبال رسالة عبر السيريال تبدأ بالحرف T متبوعاً بـ عشرة أرقام تمثل قيمة زمن timestamp (ثواني منذ 1970). يتم استخدام دالة processSyncMessage لتحويل هذه الأرقام إلى قيمة زمنية.</p>
+                        <h3>ضبط الزمن عبر الأزرار/المقاومة المتغيرة</h3>
+                        <p>يمكن توصيل زرين للتحكم في تقديم أو تأخير الوقت. يمكن استخدام مقاومة متغيرة (Potentiometer) لضبط معدل الخطوة (step)، حيث يتم تحويل القيمة المقروءة (0-1023) إلى مدى خطوة (مثلاً 10 إلى -10) باستخدام دالة map.</p>
+                        <h3>المهام المجدولة (Alarms)</h3>
+                        <p>يتم استخدام مكتبة TimeAlarms.h. يمكن تعريف إنذارات مكررة يومياً (Alarm.alarmRepeat) أو مهام تنفذ لمرة واحدة فقط (Alarm.timerOnce).</p>
+                        <h3>وحدة الزمن الحقيقي (RTC)</h3>
+                        <p>للحفاظ على الوقت حتى عند انقطاع الطاقة (لأن الوحدة تحتوي على بطارية). يتم استخدام وحدة DS1307 ومكتبة Wire.h و DS1307RTC.h.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>المؤقت الزمني الدقيق (delayMicroseconds).</li>
+                            <li>قياس طول النبضة (pulseIn).</li>
+                            <li>إعداد ساعة برمجية (Time.h).</li>
+                            <li>المهام المجدولة (TimeAlarms).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>millis() vs delay()</li>
+                            <li>pulseIn()</li>
+                            <li>Time.h & TimeAlarms.h</li>
+                            <li>RTC (Real Time Clock) DS1307</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>قياس مدة الضغط على زر.</li>
+                            <li>ضبط الساعة عبر السيريال.</li>
+                            <li>منبه يومي لتنفيذ مهمة.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود قياس مدة الضغط على زر (millisDuration)
+startTime = millis(); 
+while(digitalRead(switchPin) == LOW); // wait 
+duration = millis() - startTime; 
+Serial.println(duration);
+
+// كود تنفيذ مهمة مكررة (TimeAlarms)
+Alarm.alarmRepeat(8,30,0, MorningAlarm); // 8:30am every day
+</code></pre>
+                    `,
+                    question: `
+                        <p>إذا كان لديك ساعة تعمل بوحدة RTC DS1307 ومكتبة Time.h، كيف يمكن دمج وظيفة checkSetTime() مع استخدام مقاومة متغيرة (Potentiometer) لضبط معدل تغيير الوقت (إلى الأمام أو الخلف)، بالإضافة إلى جدولة مهمة مكررة يومياً (Alarm.alarmRepeat)؟</p>
+                    `
+                }
+            },
+            // --- الجزء 11 ---
+            {
+                id: 11,
+                title: "بروتوكولات الاتصال المتقدمة NodeMCU و I2C/SPI",
+                category: "advanced",
+                content: {
+                    explanation: `
+                        <h3>مقارنة البروتوكولات</h3>
+                        <p>I2C يحتاج طرفين فقط (SDA و SCL). يتيح توصيل أكثر من جهاز (slave) على نفس مسار البيانات المشترك (Common Bus)، لكنه أبطأ من SPI. SPI أسرع ويستخدم 4 أطراف (MOSI, MISO, SCLK, SS). يتميز بوجود طرف Slave Select (SS) لاختيار الجهاز المراد الاتصال به.</p>
+                        <h3>أطراف I2C و SPI في Arduino Uno</h3>
+                        <p>طرف SCL هو Analog Pin 5، و SDA هو Analog Pin 4. أطراف SPI القياسية هي SCLK (13)، MISO (12)، MOSI (11)، SS (10).</p>
+                        <h3>توافق الجهد</h3>
+                        <p>عند التعامل مع بوردات تعمل على 3.3 فولت، يجب استخدام مترجم الجهد (Level Translator) لتجنب تلف بوردة الأردوينو التي تعمل على 5 فولت.</p>
+                        <h3>التحكم في BlinkM</h3>
+                        <p>موديول LED ملون (RGB) يعمل بـ I2C. يتم إرسال الأوامر عبر دالة Wire.beginTransmission(address) متبوعة بأمر 'c' (fade to color)، ثم قيم R, G, B.</p>
+                        <h3>استخدام حساس العجلة (Wiichuck)</h3>
+                        <p>يستخدم بروتوكول I2C (العنوان 0x52) للحصول على بيانات التسارع. يتم إرسال بيانات ميل الحساس إلى برامج خارجية (مثل Processing) لرسم خطوط تتبع الحركة. يتم إرسال البيانات بطول 6 بايتات.</p>
+                        <h3>التعامل مع RTC و EEPROM</h3>
+                        <p>وحدة RTC (DS1307) تُقرأ عبر I2C باستخدام عنوان التحكم 0x68. ذاكرة I2C EEPROM (مثل 24LC128) تُستخدم للتخزين الدائم، وتتطلب إرسال عنوان الذاكرة أولاً.</p>
+                        <h3>الثرمومتر الرقمي (TMP75)</h3>
+                        <p>حساس حرارة رقمي يرسل قراءاته عبر I2C. يتم إرسال درجة الحرارة في بايتين: High Byte (قيمة صحيحة بالدرجات المئوية) و Low Byte (القيمة الكسرية). يمكن توصيل أكثر من حساس على نفس المسار.</p>
+                        <h3>وحدة زيادة البوابات (Port Expander)</h3>
+                        <p>تُستخدم وحدة PCF8574 (عنوان 0x38) لإضافة 8 بوابات إدخال/إخراج يتم التحكم بها بـ I2C.</p>
+                        <h3>الاتصال بين وحدتين Arduino</h3>
+                        <p>يمكن ربط وحدتي أردوينو كـ Master/Slave عبر I2C لتبادل البيانات، حيث تقوم وحدة Master باستقبال البيانات عبر السيريال ثم إرسالها إلى Slave عبر I2C.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>ربط أجهزة متعددة بمسار واحد (I2C).</li>
+                            <li>التوافقية بين الجهود (3.3V/5V).</li>
+                            <li>تخزين دائم للبيانات (EEPROM).</li>
+                            <li>الاتصال بين بوردتين (Master/Slave).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>I2C (SCL/SDA)</li>
+                            <li>SPI (MOSI/MISO/SCLK/SS)</li>
+                            <li>Level Translator</li>
+                            <li>I2C EEPROM (24LC128)</li>
+                            <li>Wire.h</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>قراءة حساس العجلة (Wiichuck).</li>
+                            <li>التعامل مع ذاكرة فلاش (I2C EEPROM).</li>
+                            <li>مقاييس الحرارة الرقمية (TMP75).</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود قراءة الزمن من RTC عبر I2C
+Wire.requestFrom(DS1307_CTRL_ID, NumberOfFields); 
+Second = bcd2dec(Wire.read() & 0x7f); // ...
+
+// كود الكتابة على I2C EEPROM
+Wire.beginTransmission(EEPROM_ID); 
+Wire.write((int)highByte(address) ); 
+Wire.write((int)lowByte(address) ); 
+Wire.write(data); 
+Wire.endTransmission();
+</code></pre>
+                    `,
+                    question: `
+                        <p>لتخزين قراءات درجة الحرارة من حساس TMP75 الرقمي (الذي يعمل ببروتوكول I2C) بشكل دائم، يجب الكتابة على ذاكرة I2C EEPROM 24LC128. صف خطوات الاتصال الأساسية لكلا الجهازين على نفس المسار، وكيف تتم معالجة مشكلة توافق الجهد إذا كان أحد المكونات يعمل بـ 3.3 فولت؟</p>
+                    `
+                }
+            },
+            // --- الجزء 12 ---
+            {
+                id: 12,
+                title: "مقدمة عن بوردة NodeMCU وإعداد بيئة عملها",
+                category: "iot",
+                content: {
+                    explanation: `
+                        <h3>ميزات NodeMCU</h3>
+                        <p>تُعتبر من البوردات المتقدمة لقدرتها على الاتصال بشبكات Wi-Fi وعمل نقطة اتصال نشطة (HotSpot) لتمكين الأجهزة الأخرى من الاتصال بها.</p>
+                        <h3>أطراف الإدخال/الإخراج</h3>
+                        <p>الأطراف يتم الإشارة إليها بـ D0-D8، وتقابل أطراف GPIO (مثلاً: D1 = GPIO5، D2 = GPIO4). الطرف A0 هو الطرف القياسي الوحيد (ADC0).</p>
+                        <h3>إعداد بيئة العمل (Arduino IDE)</h3>
+                        <p>يتطلب الأمر إضافة رابط http://arduino.esp8266.com/... في نافذة التفضيلات (preferences)، ثم تنزيل حزمة esp8266 من مدير اللوحات.</p>
+                        <h3>مفهوم خادم الإنترنت</h3>
+                        <p>خادم الويب هو مكان يخزن ويعالج ويقدم صفحات الويب للعملاء (مثل المتصفحات). يتم الاتصال بين العميل والخادم باستخدام بروتوكول HTTP (Hypertext Transfer Protocol).</p>
+                        <h3>أنماط عمل NodeMCU</h3>
+                        <p>يعمل في ثلاثة أوضاع: وضع المحطة (Station/STA)، وضع نقطة الوصول (Access Point/AP)، والوضع المزدوج.</p>
+                        <h3>نمط Soft Access Point</h3>
+                        <p>NodeMCU تنشئ شبكة Wi-Fi خاصة بها (تُسمى Soft-AP). الحد الأقصى لعدد الأجهزة التي يمكن أن تتصل بها هو خمس محطات.</p>
+                        <h3>مكتبة WiFiManager</h3>
+                        <p>تُستخدم لتجهيز NodeMCU لإنشاء صفحة ويب تظهر شبكات الواي فاي المتاحة، ليتمكن المستخدم من اختيار الشبكة وإدخال كلمة المرور.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>تكوين بيئة NodeMCU.</li>
+                            <li>الاتصال بشبكة (وضع Station).</li>
+                            <li>إنشاء شبكة محلية (Soft Access Point).</li>
+                            <li>الإعداد الديناميكي للشبكة (WifiManager).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>ESP8266 Core</li>
+                            <li>WiFi.mode (WIFI_AP / WIFI_STA)</li>
+                            <li>Access Point (HotSpot)</li>
+                            <li>HTTP Server</li>
+                            <li>WifiManager Library</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>تصميم خادم ويب (Server) باستخدامها.</li>
+                            <li>تصميم أول تطبيق (Blink).</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود إعداد NodeMCU كنقطة وصول
+WiFi.mode(WIFI_AP); 
+WiFi.softAP("NodeMCU", "nodemcur");
+</code></pre>
+                    `,
+                    question: `
+                        <p>أنت مطالب بإعداد بوردة NodeMCU (ESP8266) لتعمل في وضع نقطة الاتصال النشطة (Soft Access Point) باسم "NodeMCU". اشرح كيف يتم استخدام مكتبة WiFiManager لتوليد صفحة ويب تتيح للمستخدم تحديد شبكة الواي فاي المطلوبة، وما هي قيود عدد المحطات القصوى التي يمكن أن تتصل بهذه النقطة النشطة؟</p>
+                    `
+                }
+            },
+            // --- الجزء 13 ---
+            {
+                id: 13,
+                title: "NodeMCU: قراءة الإشارات وإنشاء خادم ويب",
+                category: "iot",
+                content: {
+                    explanation: `
+                        <h3>الهدف والاتصال</h3>
+                        <p>الهدف هو عرض قراءات حساس الحرارة والرطوبة DH11 أو DHT22 على خادم ويب. يتم توصيل طرف البيانات للحساس بالطرف D1 (GPIO5) في NodeMCU.</p>
+                        <h3>المكتبات</h3>
+                        <p>يجب تثبيت مكتبة DHT ومكتبة ESPAsyncWebServer، بالإضافة إلى مكتبة ESPAsyncTCP لتعمل بصورة سليمة.</p>
+                        <h3>التحديث اللا تزامني (AJAX)</h3>
+                        <p>لتجنب تحديث صفحة الويب بالكامل، يتم استخدام كود JavaScript (AJAX). تُستخدم دالة setInterval لإرسال طلبات HTTP GET غير متزامنة إلى مسارات محددة (مثل /temperature) كل 10000 مللي ثانية (10 ثوانٍ).</p>
+                        <h3>دالة المعالج (Processor Function)</h3>
+                        <p>دالة processor(const String& var) وظيفتها ربط المتغيرات الوهمية الموجودة في كود HTML (مثل %TEMPERATURE%) بالقيم الفعلية المقروءة من الحساس (String(t)).</p>
+                        <h3>بناء واجهة الويب</h3>
+                        <p>يتم استخدام علامة meta name="viewport" ... لجعل صفحة الويب متجاوبة (responsive). تُستخدم مكتبة Font Awesome لإظهار الأيقونات (مثل أيقونة الترمومتر).</p>
+                        <h3>إعداد الخادم</h3>
+                        <p>يتم تهيئة الخادم للاستجابة لطلبات HTTP GET. يتم إرسال القيمة كنص عادي (text/plain) باستخدام الأمر String(t).c_str(). يتم تشغيل الخادم بالأمر server.begin().</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>مراقبة البيئة عن بعد (DH11).</li>
+                            <li>تصميم واجهة مستجيبة (Responsive).</li>
+                            <li>تحديث البيانات دون انقطاع (AJAX).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>DHT Library</li>
+                            <li>espAsynchWebServer</li>
+                            <li>AJAX (XMLHttpRequest)</li>
+                            <li>Placeholder Variables</li>
+                            <li>Processor Function</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>عرض قراءات حساس الحرارة والرطوبة DH11 على خادم الويب.</li>
+                            <li>بناء صفحة ويب متجاوبة (responsive).</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-javascript">
+// كود تحديث درجة الحرارة بالـ AJAX (كل 10 ثوانٍ)
+setInterval(function ( ) { 
+    var xhttp = new XMLHttpRequest(); 
+    xhttp.onreadystatechange = function() { 
+        // ... update element ... 
+    }; 
+    xhttp.open("GET", "/temperature", true); 
+    xhttp.send(); 
+}, 10000 ) ;
+</code></pre>
+                    `,
+                    question: `
+                        <p>لتجنب إعادة تحميل صفحة الويب بالكامل عند تحديث قراءات DH11، اشرح بالتفصيل كيف يعمل الكود JavaScript (AJAX) على إرسال طلب HTTP GET غير متزامن إلى مسارات محددة (مثل /temperature)، وكيف تستخدم دالة processor في كود NodeMCU لربط المتغيرات الوهمية %TEMPERATURE% بالقيم الحقيقية للحرارة (t).</p>
+                    `
+                }
+            },
+            // --- الجزء 14 ---
+            {
+                id: 14,
+                title: "NodeMCU وتكامل شاشة OLED",
+                category: "iot",
+                content: {
+                    explanation: `
+                        <h3>نوع الشاشة والاتصال</h3>
+                        <p>الشاشة المستخدمة هي ssd1306 oled. تستخدم تكنولوجيا I2C.</p>
+                        <h3>توصيل الأطراف</h3>
+                        <p>يتم توصيل أطراف SDA و SCL للشاشة بأطراف GPIO4 و GPIO5 على NodeMCU.</p>
+                        <h3>المكتبات</h3>
+                        <p>تتطلب الشاشة تثبيت مكتبتي Adafruit_SSD1306 و Adafruit_GFX.</p>
+                        <h3>العرض والتحكم في النص</h3>
+                        <p>يتم مسح الشاشة أولاً بـ display.clearDisplay(). يتم التحكم في حجم الخط باستخدام display.setTextSize() وموقع الكتابة بـ display.setCursor().</p>
+                        <h3>عرض الرموز الخاصة</h3>
+                        <p>لعرض رمز الدرجة المئوية (°) يتم استخدام ترميز cp437 مع قيمة البايت 167، عبر الأمر display.write(167).</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>توصيل شاشة I2C.</li>
+                            <li>عرض البيانات المحلية.</li>
+                            <li>تنسيق العرض.</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>SSD1306 OLED</li>
+                            <li>I2C (GPIO4/5)</li>
+                            <li>Adafruit_SSD1306 & Adafruit_GFX</li>
+                            <li>cp437 Encoding</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>عرض قراءات الحرارة والرطوبة عليها.</li>
+                            <li>عرض رموز وحدات القياس.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود تهيئة شاشة OLED (SSD1306)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// كود عرض الحرارة على OLED
+display.setTextSize(2); 
+display.setCursor(0,10); 
+display.print(temperature); 
+// ... 
+display.cp437(true); 
+display.write(167); 
+display.setTextSize(2); 
+display.print("C");
+</code></pre>
+                    `,
+                    question: `
+                        <p>بعد توصيل شاشة OLED SSD1306 بـ NodeMCU عبر I2C (GPIO4 و GPIO5)، صف الإجراءات البرمجية اللازمة في دالة loop لعرض درجة الحرارة والرطوبة بحجم خط مختلف، مع استخدام ترميز cp437 لعرض رمز الدرجة المئوية (مثل display.write(167)).</p>
+                    `
+                }
+            },
+            // --- الجزء 15 ---
+            {
+                id: 15,
+                title: "NodeMCU وتكامل قواعد بيانات MySql - الإعداد",
+                category: "iot",
+                content: {
+                    explanation: `
+                        <h3>الإعداد البيئي</h3>
+                        <p>يتطلب المشروع تنزيل وتثبيت برنامج خادم محلي مثل XAMPP (لإدارة Apache و MySql).</p>
+                        <h3>إنشاء قاعدة البيانات والجدول</h3>
+                        <p>يتم تشغيل phpmyadmin لإنشاء قاعدة بيانات باسم nodemcu_datalog.</p>
+                        <h3>أمر SQL لإنشاء الجدول</h3>
+                        <p>يتم إنشاء جدول dht11_sensorlog يحتوي على الأعمدة: id (مفتاح أساسي)، temperature (FLOAT)، humidity (FLOAT)، وعمود reading_time من نوع TIMESTAMP يتم تعيينه تلقائياً بالتحديث.</p>
+                        <h3>سكريبت PHP للإدخال</h3>
+                        <p>يتم تصميم ملف db_write.php. يستخدم هذا الملف مكتبة mysqli للاتصال بقاعدة البيانات.</p>
+                        <h3>استقبال البيانات في PHP</h3>
+                        <p>يتم استقبال البيانات المرسلة من NodeMCU عبر طلب HTTP POST. يتم الوصول إلى هذه البيانات باستخدام المتغير السوبرجلوبال \$_POST (مثل \$_POST['sendval'] و \$_POST['sendval2']). يتم إدراج البيانات باستخدام أمر SQL INSERT.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>توفير خادم قاعدة البيانات (XAMPP).</li>
+                            <li>إنشاء بنية البيانات (SQL).</li>
+                            <li>تعريف الجدول الزمني (TIMESTAMP).</li>
+                            <li>كتابة سكريبت الإدخال (PHP).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>XAMPP (Apache/MySql)</li>
+                            <li>phpMyAdmin</li>
+                            <li>SQL (CREATE TABLE, TIMESTAMP)</li>
+                            <li>PHP mysqli_connect</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>إنشاء قاعدة بيانات nodemcu_datalog.</li>
+                            <li>تصميم جدول dht11_sensorlog.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-sql">
+-- كود إنشاء جدول قاعدة البيانات (SQL)
+CREATE TABLE dht11_sensorlog ( 
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, 
+    temperature FLOAT, 
+    humidity FLOAT, 
+    reading_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP 
+)
+</code></pre>
+                    `,
+                    question: `
+                        <p>عند إعداد بيئة الخادم المحلي (XAMPP)، صمم أمر SQL الكامل لإنشاء جدول dht11_sensorlog في قاعدة بيانات nodemcu_datalog، بحيث يضمن هذا الأمر تسجيل درجة الحرارة والرطوبة، بالإضافة إلى عمود يقوم تلقائياً بتسجيل الطابع الزمني (TIMESTAMP) لعملية الإدخال.</p>
+                    `
+                }
+            },
+            // --- الجزء 16 ---
+            {
+                id: 16,
+                title: "NodeMCU وتكامل قواعد بيانات MySql - التطبيق",
+                category: "iot",
+                content: {
+                    explanation: `
+                        <h3>كود NodeMCU للإرسال</h3>
+                        <p>يتم استخدام مكتبة ESP8266HTTPClient.h. يتم تحويل القراءات إلى سلاسل نصية باستخدام float().</p>
+                        <h3>تغليف البيانات وإرسالها</h3>
+                        <p>يتم تجميع البيانات في متغير postData بالصيغة: sendval=...&sendval2=.... يتم إرسال طلب HTTP POST إلى ملف dbwrite.php.</p>
+                        <h3>التحقق من النجاح</h3>
+                        <p>للتأكد من نجاح الإرسال، يجب التحقق من أن رمز الاستجابة (httpCode) يساوي 200. وعند النجاح، يتم تشغيل LED المدمج في البوردة.</p>
+                        <h3>صفحة عرض البيانات (PHP)</h3>
+                        <p>يتم تصميم صفحة PHP لعرض البيانات. يتم استخدام استعلام SQL: SELECT * FROM dht11_sensorlog ORDER BY id DESC LIMIT 1 لجلب أحدث سجل واحد فقط.</p>
+                        <h3>التحديث التلقائي للصفحة</h3>
+                        <p>يتم استخدام الوسم &lt;meta http-equiv="refresh" content="1"&gt; في رأس الصفحة لفرض تحديث تلقائي للمتصفح كل 1 ثانية.</p>
+                    `,
+                    projects: `
+                        <h3>المسائل والسيناريوهات</h3>
+                        <ul>
+                            <li>إرسال البيانات (HTTP POST).</li>
+                            <li>تنفيذ الإدراج (SQL INSERT).</li>
+                            <li>تنسيق الإرسال.</li>
+                            <li>عرض البيانات في الوقت الفعلي.</li>
+                            <li>التحقق من النجاح (HTTP Code 200).</li>
+                        </ul>
+                        <h3>المفاهيم المحورية</h3>
+                        <ul>
+                            <li>HTTP POST Request</li>
+                            <li>HTTPClient Library (ESP8266)</li>
+                            <li>SQL INSERT</li>
+                            <li>PHP Super Global (\$_POST)</li>
+                            <li>Meta Refresh Tag</li>
+                        </ul>
+                        <h3>أمثلة المشاريع</h3>
+                        <ul>
+                            <li>التحميل عبر POST إلى الخادم.</li>
+                            <li>تصميم صفحة عرض البيانات الحية.</li>
+                        </ul>
+                    `,
+                    code: `
+<pre><code class="language-cpp">
+// كود إرسال POST من NodeMCU
+postData = "sendval=" + sendval + "&sendval2=" + sendval2; 
+// ... 
+http.addHeader("Content-Type", "application/x-www-form-urlencoded"); 
+int httpCode = http.POST(postData);
+
+// كود استعراض أحدث البيانات في صفحة PHP
+$sql = "SELECT * FROM dht11_sensorlog ORDER BY id DESC LIMIT 1";
+</code></pre>
+                    `,
+                    question: `
+                        <p>لضمان أن NodeMCU قد سجلت بيانات درجة الحرارة والرطوبة بنجاح في قاعدة بيانات MySql، اشرح دور كلاً من متغير postData وكيفية التحقق من رمز الاستجابة HTTP Code 200. وكيف يمكن لصفحة عرض البيانات (المصممة بـ PHP) أن تضمن عرض أحدث قراءة فقط مع تحديث تلقائي للمتصفح؟</p>
+                    `
+                }
+            }
+        ];
+
+        // --- 2. إدارة حالة التطبيق والمنطق ---
+        
+        const app = {
+            state: {
+                currentView: 'overview', // 'overview', 'explorer', 'detail', 'projects' (new)
+                currentPartId: null,
+                filter: 'all', // 'all', 'basics', 'hardware', 'advanced', 'iot'
+                projectFilter: 'all' // New filter for project list
+            },
+            nodes: {
+                container: null,
+                navOverview: null,
+                navExplorer: null,
+                navProjects: null,
+                themeToggle: null, // New node for theme toggle
+                themeIcon: null // New node for theme icon
+            },
+            categoryMap: {
+                'basics': 'أساسيات Arduino',
+                'hardware': 'عتاد ومخرجات',
+                'advanced': 'بروتوكولات متقدمة',
+                'iot': 'NodeMCU (إنترنت الأشياء)'
+            }
+        };
+
+        // --- Theme Management Functions (New) ---
+
+        function applyTheme(theme) {
+            const html = document.documentElement; // استهداف وسم <html>
+            const icon = app.nodes.themeIcon;
+            
+            if (theme === 'dark') {
+                html.classList.add('dark'); // تطبيق الكلاس على <html>
+                icon.innerHTML = '&#9790;'; // Moon icon
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.classList.remove('dark'); // إزالة الكلاس من <html>
+                icon.innerHTML = '&#9788;'; // Sun icon
+                localStorage.setItem('theme', 'light');
+            }
+            // إعادة عرض المحتوى لضمان تحديث Chart.js بألوان النص الجديدة
+            // لا حاجة لـ renderApp هنا، يتم استدعاؤها في النهاية
+            if (app.state.currentView === 'overview') {
+                 // إعادة رسم المخطط فقط في حالته الحالية لتحديث الألوان
+                 if(document.getElementById('curriculumChart')) {
+                    createCurriculumChart();
+                 }
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        }
+
+        function initializeTheme() {
+            app.nodes.themeToggle = document.getElementById('theme-toggle');
+            app.nodes.themeIcon = document.getElementById('theme-icon');
+
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                applyTheme(savedTheme);
+            } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                // استخدام تفضيل النظام كوضع افتراضي إذا لم يكن هناك إعداد محفوظ
+                applyTheme('dark');
+            } else {
+                applyTheme('light');
+            }
+            // إضافة مستمع بعد التهيئة لضمان وجود app.nodes.themeToggle
+            if (app.nodes.themeToggle) {
+                app.nodes.themeToggle.addEventListener('click', toggleTheme);
+            }
+        }
+        
+        // --- 3. دوال العرض (Render Functions) ---
+
+        /**
+         * العرض الرئيسي: يقرر أي عرض (View) سيتم إظهاره
+         */
+        function renderApp() {
+            const container = app.nodes.container;
+            container.innerHTML = ''; // مسح المحتوى القديم
+
+            // تفعيل/تعطيل أزرار التنقل 
+            app.nodes.navOverview.classList.toggle('active', app.state.currentView === 'overview');
+            app.nodes.navExplorer.classList.toggle('active', app.state.currentView === 'explorer');
+            app.nodes.navProjects.classList.toggle('active', app.state.currentView === 'projects'); 
+
+            if (app.state.currentView === 'overview') {
+                container.appendChild(renderOverview());
+                // Chart.js يحتاج لإعادة تهيئة عند كل عرض
+                setTimeout(createCurriculumChart, 0); 
+            } else if (app.state.currentView === 'explorer') {
+                container.appendChild(renderExplorer());
+            } else if (app.state.currentView === 'detail') {
+                container.appendChild(renderDetail(app.state.currentPartId));
+            } else if (app.state.currentView === 'projects') { // New view
+                container.appendChild(renderProjectList());
+            }
+        }
+
+        /**
+         * عرض "نظرة عامة" (المخطط والإحصائيات)
+         */
+        function renderOverview() {
+            const element = document.createElement('div');
+            element.className = 'fade-in';
+            element.innerHTML = `
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">نظرة عامة على المنهج</h2>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">يوفر هذا المنهج التفاعلي نظرة شاملة ومفصلة لتعلم Arduino و NodeMCU، بدءًا من الأساسيات ووصولاً إلى مشاريع إنترنت الأشياء المتقدمة وتكامل قواعد البيانات.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    <!-- الإحصائيات -->
+                    <div class="col-span-1 lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl flex flex-col justify-center items-center">
+                        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-100 mb-4">إحصائيات المنهج</h3>
+                        <div class="space-y-4 w-full">
+                            <div class="flex justify-between items-center bg-brand-primary-50 dark:bg-gray-700 p-3 rounded-md">
+                                <span class="text-gray-600 dark:text-gray-300">إجمالي الأجزاء</span>
+                                <span class="text-2xl font-bold text-brand-primary-700">16</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-brand-primary-50 dark:bg-gray-700 p-3 rounded-md">
+                                <span class="text-gray-600 dark:text-gray-300">أمثلة المشاريع</span>
+                                <span class="text-2xl font-bold text-brand-primary-700">100</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-brand-primary-50 dark:bg-gray-700 p-3 rounded-md">
+                                <span class="text-gray-600 dark:text-gray-300">أسئلة تحدي</span>
+                                <span class="text-2xl font-bold text-brand-primary-700">16</span>
+                            </div>
+                        </div>
+                        <button id="goto-projects" class="mt-6 w-full py-2 px-4 bg-brand-secondary-600 text-white rounded-md hover:bg-brand-secondary-700 transition-colors">استكشاف 100 فكرة مشروع</button>
+                    </div>
+                    
+                    <!-- المخطط -->
+                    <div class="col-span-1 lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
+                        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-100 mb-4 text-center">توزيع أقسام المنهج</h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-center mb-4">انقر على أي قسم لفلترة المستكشف.</p>
+                        <div class="chart-container">
+                            <canvas id="curriculumChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            element.querySelector('#goto-projects').addEventListener('click', () => {
+                app.state.currentView = 'projects';
+                renderApp();
+            });
+
+            return element;
+        }
+
+        /**
+         * إنشاء المخطط الدائري (Chart.js)
+         */
+        function createCurriculumChart() {
+            // تدمير أي مثيل مخطط قديم قبل إنشاء واحد جديد
+            if (window.curriculumChartInstance) {
+                window.curriculumChartInstance.destroy();
+            }
+
+            const ctx = document.getElementById('curriculumChart').getContext('2d');
+            const chartData = {
+                labels: [
+                    app.categoryMap['basics'],
+                    app.categoryMap['hardware'],
+                    app.categoryMap['advanced'],
+                    app.categoryMap['iot']
+                ],
+                datasets: [{
+                    label: 'عدد الأجزاء',
+                    data: [5, 4, 3, 4], // 5 basics, 4 hardware, 3 advanced, 4 iot
+                    backgroundColor: [
+                        '#f59e0b', // brand-primary-500
+                        '#10b981', // brand-secondary-500
+                        '#3b82f6', // blue-500
+                        '#6366f1', // indigo-500
+                    ],
+                    hoverOffset: 4
+                }]
+            };
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#f3f4f6' : '#1f2937';
+
+            window.curriculumChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: textColor, // لون النصوص في الوضع الداكن
+                                font: {
+                                    family: 'Tajawal',
+                                    size: 14
+                                }
+                            }
+                        }
+                    },
+                    onClick: (evt, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const category = Object.keys(app.categoryMap)[index];
+                            app.state.filter = category;
+                            app.state.currentView = 'explorer';
+                            renderApp();
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * عرض "مستكشف المنهج" (البطاقات والفلاتر)
+         */
+        function renderExplorer() {
+            const element = document.createElement('div');
+            element.className = 'fade-in';
+
+            const filtersHTML = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4 text-center">مستكشف المنهج</h2>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto text-center mb-6">ابحث أو انقر على الفلاتر للعثور على الأجزاء التي تهمك. انقر على أي بطاقة لعرض التفاصيل الكاملة.</p>
+                    <div class="flex flex-wrap justify-center gap-2 mb-4">
+                        <button class="filter-btn ${app.state.filter === 'all' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-filter="all">الكل (16)</button>
+                        <button class="filter-btn ${app.state.filter === 'basics' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-filter="basics">${app.categoryMap['basics']} (5)</button>
+                        <button class="filter-btn ${app.state.filter === 'hardware' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-filter="hardware">${app.categoryMap['hardware']} (4)</button>
+                        <button class="filter-btn ${app.state.filter === 'advanced' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-filter="advanced">${app.categoryMap['advanced']} (3)</button>
+                        <button class="filter-btn ${app.state.filter === 'iot' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-filter="iot">${app.categoryMap['iot']} (4)</button>
+                    </div>
+                    <input id="search-box" type="text" placeholder="ابحث في العناوين..." class="w-full max-w-lg mx-auto p-3 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-brand-primary-500 focus:outline-none block">
+                </div>
+            `;
+            
+            const filteredData = curriculumData.filter(part => {
+                const categoryMatch = (app.state.filter === 'all' || part.category === app.state.filter);
+                return categoryMatch;
+            });
+
+            const cardsHTML = filteredData.map(part => `
+                <div class="card bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md cursor-pointer" data-id="${part.id}">
+                    <span class="inline-block bg-brand-primary-100 dark:bg-brand-primary-900 text-brand-primary-800 dark:text-brand-primary-200 text-sm font-semibold px-3 py-1 rounded-full mb-3">${app.categoryMap[part.category]}</span>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">الجزء ${part.id}: ${part.title}</h3>
+                    <p class="text-gray-600 dark:text-gray-400">انقر لعرض الشرح التفصيلي، المشاريع، الأكواد، والسؤال الذهبي...</p>
+                </div>
+            `).join('');
+
+            element.innerHTML = `
+                ${filtersHTML}
+                <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${cardsHTML}
+                </div>
+            `;
+
+            // إضافة المستمعين للأحداث (Event Listeners)
+            element.addEventListener('click', (e) => {
+                const filterBtn = e.target.closest('.filter-btn');
+                const card = e.target.closest('.card');
+                
+                if (filterBtn) {
+                    app.state.filter = filterBtn.dataset.filter;
+                    renderApp(); // إعادة العرض مع الفلتر الجديد
+                }
+                
+                if (card) {
+                    app.state.currentView = 'detail';
+                    app.state.currentPartId = parseInt(card.dataset.id);
+                    renderApp(); // إعادة العرض لإظهار التفاصيل
+                }
+            });
+
+            element.querySelector('#search-box').addEventListener('keyup', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const grid = element.querySelector('#cards-grid');
+                grid.innerHTML = ''; // مسح البطاقات
+                
+                const searchFiltered = curriculumData.filter(part => {
+                    const categoryMatch = (app.state.filter === 'all' || part.category === app.state.filter);
+                    const titleMatch = part.title.toLowerCase().includes(searchTerm);
+                    return categoryMatch && titleMatch;
+                });
+
+                grid.innerHTML = searchFiltered.map(part => `
+                    <div class="card bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md cursor-pointer" data-id="${part.id}">
+                        <span class="inline-block bg-brand-primary-100 dark:bg-brand-primary-900 text-brand-primary-800 dark:text-brand-primary-200 text-sm font-semibold px-3 py-1 rounded-full mb-3">${app.categoryMap[part.category]}</span>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">الجزء ${part.id}: ${part.title}</h3>
+                        <p class="text-gray-600 dark:text-gray-400">انقر لعرض الشرح التفصيلي، المشاريع، الأكواد، والسؤال الذهبي...</p>
+                    </div>
+                `).join('');
+            });
+
+            return element;
+        }
+
+        /**
+         * عرض "صفحة التفاصيل" (المحتوى المبوب)
+         */
+        function renderDetail(id) {
+            const part = curriculumData.find(p => p.id === id);
+            if (!part) return renderExplorer(); // العودة إذا لم يتم العثور على الجزء
+
+            const element = document.createElement('div');
+            element.className = 'fade-in';
+            element.innerHTML = `
+                <div class="mb-6">
+                    <button id="back-to-explorer" class="text-brand-primary-700 dark:text-brand-primary-400 hover:text-brand-primary-900 font-medium transition-colors">&larr; العودة إلى المستكشف</button>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-lg">
+                    <span class="inline-block bg-brand-primary-100 dark:bg-brand-primary-900 text-brand-primary-800 dark:text-brand-primary-200 text-sm font-semibold px-3 py-1 rounded-full mb-3">${app.categoryMap[part.category]}</span>
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">الجزء ${part.id}: ${part.title}</h2>
+                    
+                    <!-- واجهة التبويبات -->
+                    <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+                        <nav class="flex space-x-4 -mb-px" dir="ltr">
+                            <button class="tab-button active text-gray-700 dark:text-gray-300 hover:text-brand-primary-700 dark:hover:text-brand-primary-400" data-tab="explanation">الشرح التفصيلي</button>
+                            <button class="tab-button text-gray-700 dark:text-gray-300 hover:text-brand-primary-700 dark:hover:text-brand-primary-400" data-tab="projects">المشاريع والسيناريوهات</button>
+                            <button class="tab-button text-gray-700 dark:text-gray-300 hover:text-brand-primary-700 dark:hover:text-brand-primary-400" data-tab="code">الأكواد (Code)</button>
+                            <button class="tab-button text-gray-700 dark:text-gray-300 hover:text-brand-primary-700 dark:hover:text-brand-primary-400" data-tab="question">السؤال الذهبي</button>
+                        </nav>
+                    </div>
+                    
+                    <!-- محتوى التبويبات -->
+                    <div class="prose-custom max-w-none text-gray-800 dark:text-gray-200">
+                        <div id="tab-explanation" class="tab-content">
+                            ${part.content.explanation}
+                        </div>
+                        <div id="tab-projects" class="tab-content hidden">
+                            ${part.content.projects}
+                        </div>
+                        <div id="tab-code" class="tab-content hidden">
+                            ${part.content.code}
+                        </div>
+                        <div id="tab-question" class="tab-content hidden bg-yellow-50 dark:bg-yellow-900 border-r-4 border-yellow-400">
+                            <h3 class="text-xl font-bold text-yellow-800 dark:text-yellow-300">تحدي: السؤال الذهبي</h3>
+                            ${part.content.question}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // إضافة المستمعين للأحداث
+            element.querySelector('#back-to-explorer').addEventListener('click', () => {
+                app.state.currentView = 'explorer';
+                app.state.currentPartId = null;
+                renderApp();
+            });
+
+            element.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const tabId = e.target.dataset.tab;
+                    
+                    // تحديث الأزرار
+                    element.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    // إظهار/إخفاء المحتوى
+                    element.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.toggle('hidden', content.id !== `tab-${tabId}`);
+                    });
+                });
+            });
+
+            return element;
+        }
+        
+        /**
+         * عرض قائمة المشاريع
+         */
+        function renderProjectList() {
+            const element = document.createElement('div');
+            element.className = 'fade-in';
+            
+            const levelMap = {
+                'مبتدئ': 'bg-brand-secondary-200 text-brand-secondary-800 dark:bg-brand-secondary-900 dark:text-brand-secondary-300',
+                'متوسط': 'bg-brand-primary-200 text-brand-primary-800 dark:bg-brand-primary-900 dark:text-brand-primary-300',
+                'متقدم': 'bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                'خبير': 'bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-300'
+            };
+
+            const filtersHTML = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4 text-center">100 فكرة مشروع تطبيقي</h2>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto text-center mb-6">استكشف 100 فكرة مشروع تم تصنيفها حسب مستوى التعقيد (المبتدئ حتى الخبير). هذه المشاريع تغطي كافة الأجزاء الـ 16.</p>
+                    <div class="flex flex-wrap justify-center gap-2 mb-4">
+                        <button class="project-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${app.state.projectFilter === 'all' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-level="all">الكل (100)</button>
+                        <button class="project-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${app.state.projectFilter === 'مبتدئ' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-level="مبتدئ">مبتدئ (25)</button>
+                        <button class="project-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${app.state.projectFilter === 'متوسط' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-level="متوسط">متوسط (25)</button>
+                        <button class="project-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${app.state.projectFilter === 'متقدم' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-level="متقدم">متقدم (25)</button>
+                        <button class="project-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${app.state.projectFilter === 'خبير' ? 'bg-brand-primary-700 text-white' : 'bg-white dark:bg-gray-700 dark:text-gray-100 text-gray-700'}" data-level="خبير">خبير (25)</button>
+                    </div>
+                </div>
+            `;
+            
+            const filteredProjects = projectList.filter(p => 
+                app.state.projectFilter === 'all' || p.level === app.state.projectFilter
+            );
+
+            const projectsHTML = filteredProjects.map(p => `
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border-r-4 ${p.level === 'مبتدئ' ? 'border-brand-secondary-600' : p.level === 'متوسط' ? 'border-brand-primary-600' : p.level === 'متقدم' ? 'border-blue-600' : 'border-red-600'}">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="inline-block ${levelMap[p.level]} text-xs font-bold px-2 py-1 rounded-full">${p.level}</span>
+                        <span class="text-gray-500 dark:text-gray-400 font-bold text-lg">${p.id}</span>
+                    </div>
+                    <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">${p.title}</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">${p.concept}</p>
+                </div>
+            `).join('');
+
+
+            element.innerHTML = `
+                ${filtersHTML}
+                <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${projectsHTML}
+                </div>
+            `;
+
+            element.addEventListener('click', (e) => {
+                const filterBtn = e.target.closest('.project-filter-btn');
+                if (filterBtn) {
+                    app.state.projectFilter = filterBtn.dataset.level;
+                    renderApp(); 
+                }
+            });
+
+            return element;
+        }
+
+
+        // --- 4. بدء التطبيق ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // إعداد العقد الرئيسية (الآن يتم سحب الأزرار من الهيدر مباشرة)
+            app.nodes.container = document.getElementById('app-container');
+            app.nodes.navOverview = document.getElementById('nav-overview');
+            app.nodes.navExplorer = document.getElementById('nav-explorer');
+            app.nodes.navProjects = document.getElementById('nav-projects');
+            app.nodes.themeToggle = document.getElementById('theme-toggle');
+            app.nodes.themeIcon = document.getElementById('theme-icon');
+
+
+            // تهيئة الثيم أولاً
+            initializeTheme();
+            
+            // إضافة مستمعي التنقل
+            app.nodes.navOverview.addEventListener('click', () => {
+                app.state.currentView = 'overview';
+                renderApp();
+            });
+            app.nodes.navExplorer.addEventListener('click', () => {
+                app.state.currentView = 'explorer';
+                renderApp();
+            });
+             app.nodes.navProjects.addEventListener('click', () => {
+                app.state.currentView = 'projects';
+                renderApp();
+            });
+            
+            // مستمع زر تبديل الثيم
+            // تم نقله إلى initializeTheme لضمان وجود app.nodes.themeToggle
+            // app.nodes.themeToggle.addEventListener('click', toggleTheme);
+
+
+            // العرض الأولي
+            renderApp();
+        });
+
+    </script>
+</body>
+</html>
